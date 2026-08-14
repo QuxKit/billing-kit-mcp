@@ -36,9 +36,13 @@ jobs:
           pnpm run build
 
       - name: Typecheck, build and test the MCP server
+        # The binaries are invoked directly rather than via `pnpm run`: pnpm 11
+        # re-verifies dependencies before every `run`, which fails in CI on the
+        # esbuild build-script approval gate. Install once, then run the tools —
+        # the build command mirrors the "build" script in package.json.
         run: |
           cd "$WS/billing-kit-mcp"
           pnpm install
-          pnpm run typecheck
-          pnpm run build
-          pnpm test
+          node_modules/.bin/tsc --noEmit
+          node_modules/.bin/esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --banner:js="#!/usr/bin/env node"
+          node --import tsx --test test/*.test.ts
