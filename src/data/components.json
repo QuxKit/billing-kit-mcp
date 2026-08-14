@@ -1,0 +1,215 @@
+{
+  "homepage": "https://components.billing-kit.com",
+  "items": [
+    {
+      "name": "money",
+      "title": "Money format",
+      "type": "registry:lib",
+      "description": "The single formatting boundary for billing-kit Money. Every amount rendered by any component goes through formatMoney here, so amount-as-number math never enters the tree.",
+      "categories": [
+        "core"
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "use-usage",
+      "title": "useUsage",
+      "type": "registry:hook",
+      "description": "Headless hook over billing-kit queryUsage. Returns StoredUsageEvent rows and UsageAggregate quantities as Quantity, never as number.",
+      "categories": [
+        "usage"
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "use-balance",
+      "title": "useBalance",
+      "type": "registry:hook",
+      "description": "Headless hook over billing-kit balance. Returns Money and defers all formatting to money-format.",
+      "categories": [
+        "ledger"
+      ],
+      "registryDependencies": [
+        "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "use-entitlement",
+      "title": "useEntitlement",
+      "type": "registry:hook",
+      "description": "Headless hook the installing app uses to read its own end-users' entitlements. This is a product feature, not the seat gate: the seat gate lives at install time in front of the registry, never in shipped source.",
+      "categories": [
+        "checkout"
+      ],
+      "registryDependencies": [],
+      "dependencies": []
+    },
+    {
+      "name": "usage-meter",
+      "title": "Usage meter",
+      "type": "registry:ui",
+      "description": "A quota meter for a metered subject. Reads UsageAggregate quantities and a plan limit; renders the ratio without ever coercing a Quantity or an amount to number.",
+      "categories": [
+        "usage"
+      ],
+      "registryDependencies": [
+        "progress",
+        "@billing-kit/use-usage"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "usage-chart",
+      "title": "Usage chart",
+      "type": "registry:ui",
+      "description": "A time-bucketed usage chart over UsageWindow aggregates. Axis ticks are Quantity-derived labels, formatted by their own scale, not divided.",
+      "categories": [
+        "usage"
+      ],
+      "registryDependencies": [
+        "chart",
+        "@billing-kit/use-usage"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0",
+        "recharts"
+      ]
+    },
+    {
+      "name": "pricing-table",
+      "title": "Pricing table",
+      "type": "registry:ui",
+      "description": "A plan comparison table. Each cell is a Money rendered through money-format; a rate column shows minor-units-per-unit as billing-kit stores it, never a dollars-per-unit reinterpretation.",
+      "categories": [
+        "pricing"
+      ],
+      "registryDependencies": [
+        "card",
+        "button",
+        "badge",
+        "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "plan-card",
+      "title": "Plan card",
+      "type": "registry:ui",
+      "description": "A single plan tier card. Price is Money formatted by money-format; the period and currency tag come from the plan, never inferred by scaling.",
+      "categories": [
+        "pricing"
+      ],
+      "registryDependencies": [
+        "card",
+        "button",
+        "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "ledger-table",
+      "title": "Ledger table",
+      "type": "registry:ui",
+      "description": "The append-only double-entry ledger as a table. Debits and credits are LedgerLeg Money values, formatted by money-format; the running balance is billing-kit's balance, never a client-side sum.",
+      "categories": [
+        "ledger"
+      ],
+      "registryDependencies": [
+        "table",
+        "badge",
+        "@billing-kit/money",
+        "@billing-kit/use-balance"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "invoice-view",
+      "title": "Invoice view",
+      "type": "registry:ui",
+      "description": "A settled-period invoice from SettlementResult lines. Line totals and the invoice total are Money through money-format; the residue from price() is shown, not hidden, so the invoice and the ledger reconcile.",
+      "categories": [
+        "ledger"
+      ],
+      "registryDependencies": [
+        "table",
+        "separator",
+        "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "balance-badge",
+      "title": "Balance badge",
+      "type": "registry:ui",
+      "description": "A compact current-balance badge for a subject. Money in, money-format out; the sign convention follows billing-kit's ledger, positive debit and negative credit.",
+      "categories": [
+        "ledger"
+      ],
+      "registryDependencies": [
+        "badge",
+        "@billing-kit/money",
+        "@billing-kit/use-balance"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "checkout-panel",
+      "title": "Checkout panel",
+      "type": "registry:block",
+      "description": "A plan-selection and confirm block that hands a subscription intent to a BillingProvider. It renders amounts through money-format and never captures payment itself; capture is the provider's, per billing-kit's boundary.",
+      "categories": [
+        "checkout"
+      ],
+      "registryDependencies": [
+        "card",
+        "button",
+        "radio-group",
+        "@billing-kit/money",
+        "@billing-kit/plan-card"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "admin-console",
+      "title": "Superadmin console",
+      "type": "registry:block",
+      "description": "An operator view over tenants, their balances and settlement status. Reads across billing-kit balance and settlement; gated in the host app by the operator's own role, which the block asserts but does not define.",
+      "categories": [
+        "superadmin"
+      ],
+      "registryDependencies": [
+        "table",
+        "tabs",
+        "badge",
+        "@billing-kit/money",
+        "@billing-kit/ledger-table"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    }
+  ]
+}

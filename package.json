@@ -1,0 +1,30 @@
+{
+  "name": "billing-kit-mcp",
+  "version": "0.1.0",
+  "description": "An MCP server for billing-kit: exact money math, ledger checks, and component discovery for AI assistants.",
+  "type": "module",
+  "bin": {
+    "billing-kit-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "peerDependencies": {
+    "billing-kit": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "billing-kit": "link:../billing-kit",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
