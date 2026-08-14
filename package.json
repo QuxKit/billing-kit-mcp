@@ -1,5 +1,5 @@
 {
-  "name": "billing-kit-mcp",
+  "name": "@quxkit/billing-kit-mcp",
   "version": "0.1.0",
   "description": "An MCP server for billing-kit: exact money math, ledger checks, and component discovery for AI assistants.",
   "type": "module",
@@ -18,11 +18,11 @@
     "zod": "^3.23.0"
   },
   "peerDependencies": {
-    "billing-kit": "*"
+    "@quxkit/billing-kit": "*"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
-    "billing-kit": "link:../billing-kit",
+    "@quxkit/billing-kit": "link:../billing-kit",
     "esbuild": "^0.28.2",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"

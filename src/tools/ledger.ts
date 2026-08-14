@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Money } from 'billing-kit';
+import { Money } from '@quxkit/billing-kit';
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 

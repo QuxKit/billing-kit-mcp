@@ -15,12 +15,12 @@ importers:
         specifier: ^3.23.0
         version: 3.25.76
     devDependencies:
+      '@quxkit/billing-kit':
+        specifier: link:../billing-kit
+        version: link:../billing-kit
       '@types/node':
         specifier: ^22.9.0
         version: 22.20.1
-      billing-kit:
-        specifier: link:../billing-kit
-        version: link:../billing-kit
       esbuild:
         specifier: ^0.28.2
         version: 0.28.2

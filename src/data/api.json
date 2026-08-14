@@ -4,7 +4,7 @@
     {
       "name": "Money",
       "kind": "class",
-      "module": "billing-kit",
+      "module": "@quxkit/billing-kit",
       "summary": "An exact monetary amount: integer minor units in a bigint, tagged with an ISO-4217 currency. Never a JS number, so a float rounding error cannot exist.",
       "members": [
         "Money.fromMinor(minor: bigint | string, currency: string): Money",
@@ -21,7 +21,7 @@
     {
       "name": "Quantity",
       "kind": "class",
-      "module": "billing-kit",
+      "module": "@quxkit/billing-kit",
       "summary": "An exact decimal quantity with a declared scale (12 fractional digits). Used for metered usage before it is priced.",
       "members": [
         "Quantity.fromBigInt(value: bigint): Quantity",
@@ -33,7 +33,7 @@
     {
       "name": "Rate",
       "kind": "class",
-      "module": "billing-kit",
+      "module": "@quxkit/billing-kit",
       "summary": "A price per unit, in MINOR units (cents), as an exact decimal. A rate of 0.00012 means 0.00012 cents per unit.",
       "members": ["Rate.fromDecimalString(value: string): Rate", "rate.toDecimalString(): string"],
       "gotcha": "The rate is in minor units, not major. Both price() and the SQL metering read it that way; a rate in dollars would price 100x high in one layer."
@@ -41,42 +41,42 @@
     {
       "name": "price",
       "kind": "function",
-      "module": "billing-kit",
+      "module": "@quxkit/billing-kit",
       "summary": "Multiply a Quantity by a Rate to a Money, rounding once (half-even) and keeping the exact pre-rounding value.",
       "members": ["price(quantity: Quantity, rate: Rate, currency: string): { amount: Money; exactMinor: string; residueMinor: string }"]
     },
     {
       "name": "record",
       "kind": "function",
-      "module": "billing-kit",
+      "module": "@quxkit/billing-kit",
       "summary": "Record one usage event, idempotently. The dedupe key is (tenant, source, subject, metric, externalId), so the same request id can carry several metrics without one shadowing another.",
       "members": ["record(db: SqlExecutor, event: UsageEvent, now: Date): Promise<RecordedEvent>"]
     },
     {
       "name": "post",
       "kind": "function",
-      "module": "billing-kit",
+      "module": "@quxkit/billing-kit",
       "summary": "Post a balanced transaction to the append-only, double-entry ledger. Legs must sum to zero per currency; idempotent by (tenant, sourceKind, sourceId).",
       "members": ["post(db: SqlExecutor, posting: LedgerPosting, now: Date): Promise<PostResult>", "accrualPosting({...}), paymentPosting({...})"]
     },
     {
       "name": "balance",
       "kind": "function",
-      "module": "billing-kit",
+      "module": "@quxkit/billing-kit",
       "summary": "The current balance of one account for a subject, as a Money — a SUM in SQL, so it is re-derivable and cannot disagree with the entries.",
       "members": ["balance(db, { tenantId, subjectId, account, currency }): Promise<Money>", "entries(db, query): Promise<LedgerEntry[]>"]
     },
     {
       "name": "providers",
       "kind": "module",
-      "module": "billing-kit/providers",
+      "module": "@quxkit/billing-kit/providers",
       "summary": "The provider interface plus Stripe and Paddle implementations. Every branch reads `capabilities`, never provider.name, so a fourth provider is an adapter, not a rewrite.",
       "members": ["BillingProvider (interface)", "StripeProvider", "PaddleProvider", "verifyWebhook(...)"]
     },
     {
       "name": "metering",
       "kind": "module",
-      "module": "billing-kit/metering",
+      "module": "@quxkit/billing-kit/metering",
       "summary": "The set-based metering driver: one CTE pass with FOR UPDATE SKIP LOCKED, batched and idempotent, so concurrent workers cannot double-bill and a run is a bounded transaction.",
       "members": ["meterBatch(db, options): Promise<RunMetrics>"]
     }
