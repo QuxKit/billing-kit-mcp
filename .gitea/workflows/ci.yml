@@ -1,0 +1,44 @@
+# CI — typecheck, build and test the MCP server on every push and PR.
+#
+# The MCP server links billing-kit (`link:../billing-kit`) and bundles its built
+# output, so CI fetches billing-kit as a sibling and builds it first. Host runner
+# (brett-local): node (nvm), pnpm and git are already there; no external actions.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: host
+    steps:
+      - name: Put node / pnpm on PATH
+        run: |
+          ls -d /Users/ezyp/.nvm/versions/node/*/bin | tail -1 >> "$GITHUB_PATH"
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+
+      - name: Checkout the MCP server and its billing-kit sibling
+        run: |
+          set -euo pipefail
+          WS="$(mktemp -d)"
+          echo "WS=$WS" >> "$GITHUB_ENV"
+          git clone -q "http://token:${{ github.token }}@localhost:3003/${{ github.repository }}.git" "$WS/billing-kit-mcp"
+          ( cd "$WS/billing-kit-mcp" && git checkout -q "${{ github.sha }}" )
+          # billing-kit at its latest main — the MCP bundles its built output.
+          git clone -q --depth 1 "http://localhost:3003/brett/billing-kit.git" "$WS/billing-kit"
+
+      - name: Build billing-kit (the MCP bundles it)
+        run: |
+          cd "$WS/billing-kit"
+          pnpm install
+          pnpm run build
+
+      - name: Typecheck, build and test the MCP server
+        run: |
+          cd "$WS/billing-kit-mcp"
+          pnpm install
+          pnpm run typecheck
+          pnpm run build
+          pnpm test
