@@ -9,6 +9,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Nightly, so a billing-kit change is caught here within a day even though it
+  # lives in another repo — the MCP bundles billing-kit's built output.
+  schedule:
+    - cron: '41 6 * * *'
 
 jobs:
   verify:
