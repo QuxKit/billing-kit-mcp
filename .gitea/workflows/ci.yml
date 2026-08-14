@@ -42,7 +42,10 @@ jobs:
         # the build command mirrors the "build" script in package.json.
         run: |
           cd "$WS/billing-kit-mcp"
-          pnpm install
+          # strict-dep-builds=false: esbuild's build script is "ignored" (its
+          # binary comes from the platform package in the store, so it runs fine
+          # without it), and without this pnpm 11 exits 1 on that alone.
+          pnpm install --config.strict-dep-builds=false
           node_modules/.bin/tsc --noEmit
           node_modules/.bin/esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --banner:js="#!/usr/bin/env node"
           node --import tsx --test test/*.test.ts
