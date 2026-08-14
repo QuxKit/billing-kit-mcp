@@ -23,6 +23,25 @@ flowchart LR
     class bk a
 ```
 
+## Why it matters
+
+The same question, two ways — the difference is the whole reason this server exists:
+
+```mermaid
+flowchart TB
+    q["price 1,234,567 tokens<br/>at $0.0000012 / token, USD"]
+    q --> guess["assistant on its own<br/>invents qty × rate ÷ 100<br/>drifts on large values,<br/>wrong for a third of ISO 4217"]
+    q --> tool["price_usage → billing-kit<br/>$1.48 · exact 148.14804 minor<br/>from the Money type"]
+    classDef bad fill:#9e2b2b,stroke:#7f2222,color:#fff
+    classDef good fill:#2c6e5b,stroke:#225646,color:#fff
+    class guess bad
+    class tool good
+```
+
+A language model is a plausible-number generator; money needs the *correct* number.
+This server moves the arithmetic out of the model and into billing-kit, where a
+float can't touch it.
+
 ## Tools
 
 | Tool | What it does |
