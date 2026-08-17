@@ -1,4 +1,6 @@
-# billing-kit-mcp
+# @quxkit/billing-kit-mcp
+
+**QuxKit** · blue stone · exact money math for AI assistants
 
 An [MCP](https://modelcontextprotocol.io) server that gives an AI assistant
 billing-kit's real capabilities: **exact money math**, a **double-entry balance
@@ -10,32 +12,37 @@ a third of ISO 4217 and drifts on large values. This server hands the model the
 number billing-kit *actually computes*, from the same `Money` type a
 floating-point error can't touch.
 
-```mermaid
-flowchart LR
-    host["MCP host<br/>Claude Desktop · Claude Code"]
-    subgraph srv["billing-kit-mcp"]
-        t["price_usage · format_money<br/>check_ledger_balance<br/>search_api · list_components"]
-    end
-    bk["billing-kit<br/>Money · Quantity · Rate · price"]
-    host <-->|stdio · JSON-RPC| srv
-    t -->|exact arithmetic| bk
-    classDef a fill:#0d9488,stroke:#0f766e,color:#fff
-    class bk a
 ```
+ MCP host                          ┌───────────────────────────┐
+ Claude Desktop ◀──── stdio ─────▶ │  @quxkit/billing-kit-mcp  │
+ Claude Code          JSON-RPC     │                           │
+                                   │  price_usage              │
+                                   │  format_money             │
+                                   │  check_ledger_balance     │
+                                   │  search_api               │
+                                   │  list_components          │
+                                   └─────────────┬─────────────┘
+                                                 │ exact arithmetic
+                                                 ▼
+                                   @quxkit/billing-kit
+                                   Money · Quantity · Rate · price
+```
+
+_Rendered diagrams (mermaid): [docs/DIAGRAMS.md](https://github.com/QuxKit/billing-kit-mcp/blob/main/docs/DIAGRAMS.md)._
 
 ## Why it matters
 
 The same question, two ways — the difference is the whole reason this server exists:
 
-```mermaid
-flowchart TB
-    q["price 1,234,567 tokens<br/>at $0.0000012 / token, USD"]
-    q --> guess["assistant on its own<br/>invents qty × rate ÷ 100<br/>drifts on large values,<br/>wrong for a third of ISO 4217"]
-    q --> tool["price_usage → billing-kit<br/>$1.48 · exact 148.14804 minor<br/>from the Money type"]
-    classDef bad fill:#9e2b2b,stroke:#7f2222,color:#fff
-    classDef good fill:#2c6e5b,stroke:#225646,color:#fff
-    class guess bad
-    class tool good
+```
+ price 1,234,567 tokens at $0.0000012 / token, USD
+
+   ✗  assistant on its own
+      invents qty × rate ÷ 100 — drifts on large values,
+      and is wrong for a third of ISO 4217
+
+   ✓  price_usage → billing-kit
+      $1.48 · exact 148.14804 minor units, from the Money type
 ```
 
 A language model is a plausible-number generator; money needs the *correct* number.
@@ -102,6 +109,23 @@ The suite drives the server through a real MCP `Client` over an in-memory
 transport — the same code path a host uses — asserting that `price_usage`
 returns billing-kit's exact value, `format_money` is currency-correct, and the
 ledger check accepts a balanced posting and rejects an unbalanced one.
+
+
+## The QuxKit family
+
+Libraries you embed, not services you operate. Each kit owns one narrow thing
+and composes with the rest over shared shapes — one executor interface, one
+opaque tenant id, one Money type.
+
+| Package | Stone | What it owns |
+|---|---|---|
+| [`@quxkit/identity-kit`](https://github.com/QuxKit/identity-kit) | gold | Accounts, argon2id credentials, revocable sessions — produces a `UserId`. |
+| [`@quxkit/tenant-kit`](https://github.com/QuxKit/tenant-kit) | green | Tenant directory, request→tenant resolution, row-level-security isolation. |
+| [`@quxkit/billing-kit`](https://github.com/QuxKit/billing-kit) | blue | Metering, exact pricing, a double-entry ledger, provider settlement. |
+| [`@quxkit/billing-kit-adapters`](https://github.com/QuxKit/billing-kit-adapters) | blue | Payment providers beyond Stripe and Paddle. |
+| [`tenant-kit-adapters`](https://github.com/QuxKit/tenant-kit-adapters) | green | Enterprise SSO, SCIM provisioning, RBAC-engine bridges. |
+| [`billing-kit-components`](https://github.com/QuxKit/billing-kit-components) | blue | shadcn-compatible billing UI, per seat. |
+| [`@quxkit/billing-kit-mcp`](https://github.com/QuxKit/billing-kit-mcp) | blue | Exact money math for AI assistants over MCP. |
 
 ## Licence
 
