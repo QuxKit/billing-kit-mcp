@@ -1,6 +1,10 @@
 # @quxkit/billing-kit-mcp
 
+<img src="https://raw.githubusercontent.com/QuxKit/quxkit-brand/main/billing-kit/sizes/billing-kit-128.png" width="76" align="right" alt="">
+
 **QuxKit** · blue stone · exact money math for AI assistants
+
+![status](https://img.shields.io/badge/status-shipped-2ea043) ![licence](https://img.shields.io/badge/licence-Apache--2.0-4f83f6) ![npm](https://img.shields.io/badge/npm-%40quxkit%2Fbilling--kit--mcp-cb3837)
 
 An [MCP](https://modelcontextprotocol.io) server that gives an AI assistant
 billing-kit's real capabilities: **exact money math**, a **double-entry balance
