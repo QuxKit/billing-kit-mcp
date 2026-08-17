@@ -2,9 +2,9 @@
 // that an assistant gets the exact number the library would compute, not a
 // plausible-looking one it invented with `qty * rate / 100`.
 
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Money, Quantity, Rate, price } from '@quxkit/billing-kit';
+import { Money, price, Quantity, Rate } from '@quxkit/billing-kit';
+import { z } from 'zod';
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 

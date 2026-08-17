@@ -2,9 +2,9 @@
 // they sum to zero per currency — using billing-kit's exact Money arithmetic,
 // so an assistant proposing a posting can verify it before writing it.
 
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Money } from '@quxkit/billing-kit';
+import { z } from 'zod';
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 
@@ -49,7 +49,9 @@ export function registerLedgerTools(server: McpServer): void {
 
         return text(
           [
-            balanced ? 'BALANCED ✓ — this is a valid double-entry transaction.' : 'NOT BALANCED ✗ — billing-kit would reject this posting.',
+            balanced
+              ? 'BALANCED ✓ — this is a valid double-entry transaction.'
+              : 'NOT BALANCED ✗ — billing-kit would reject this posting.',
             '',
             'legs:',
             ...lines,

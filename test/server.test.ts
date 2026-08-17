@@ -17,7 +17,9 @@ async function connect() {
   return client;
 }
 
-const textOf = (r: any): string => r.content.map((c: any) => c.text).join('\n');
+type ToolResult = Awaited<ReturnType<Client['callTool']>>;
+const textOf = (r: ToolResult): string =>
+  (r.content as Array<{ type: string; text?: string }>).map((c) => c.text ?? '').join('\n');
 
 test('lists all the tools', async () => {
   const client = await connect();
@@ -33,7 +35,7 @@ test('lists all the tools', async () => {
   ]);
 });
 
-test('price_usage returns billing-kit\'s exact number', async () => {
+test("price_usage returns billing-kit's exact number", async () => {
   const client = await connect();
   const r = await client.callTool({
     name: 'price_usage',
@@ -48,40 +50,48 @@ test('price_usage returns billing-kit\'s exact number', async () => {
 test('format_money is currency-correct, not / 100', async () => {
   const client = await connect();
   // JPY has no minor unit: 1500 minor is ¥1,500, not ¥15.00
-  const jpy = textOf(await client.callTool({
-    name: 'format_money',
-    arguments: { minorUnits: '1500', currency: 'JPY' },
-  }));
+  const jpy = textOf(
+    await client.callTool({
+      name: 'format_money',
+      arguments: { minorUnits: '1500', currency: 'JPY' },
+    }),
+  );
   assert.match(jpy, /￥1,500|¥1,500/);
-  const usd = textOf(await client.callTool({
-    name: 'format_money',
-    arguments: { minorUnits: '1999', currency: 'USD' },
-  }));
+  const usd = textOf(
+    await client.callTool({
+      name: 'format_money',
+      arguments: { minorUnits: '1999', currency: 'USD' },
+    }),
+  );
   assert.match(usd, /\$19\.99/);
 });
 
 test('check_ledger_balance confirms zero-sum, rejects unbalanced', async () => {
   const client = await connect();
-  const ok = textOf(await client.callTool({
-    name: 'check_ledger_balance',
-    arguments: {
-      legs: [
-        { account: 'customer_balance', minorUnits: '1999', currency: 'USD' },
-        { account: 'revenue_accrued', minorUnits: '-1999', currency: 'USD' },
-      ],
-    },
-  }));
+  const ok = textOf(
+    await client.callTool({
+      name: 'check_ledger_balance',
+      arguments: {
+        legs: [
+          { account: 'customer_balance', minorUnits: '1999', currency: 'USD' },
+          { account: 'revenue_accrued', minorUnits: '-1999', currency: 'USD' },
+        ],
+      },
+    }),
+  );
   assert.match(ok, /BALANCED/);
 
-  const bad = textOf(await client.callTool({
-    name: 'check_ledger_balance',
-    arguments: {
-      legs: [
-        { account: 'cash', minorUnits: '2000', currency: 'USD' },
-        { account: 'customer_balance', minorUnits: '-1999', currency: 'USD' },
-      ],
-    },
-  }));
+  const bad = textOf(
+    await client.callTool({
+      name: 'check_ledger_balance',
+      arguments: {
+        legs: [
+          { account: 'cash', minorUnits: '2000', currency: 'USD' },
+          { account: 'customer_balance', minorUnits: '-1999', currency: 'USD' },
+        ],
+      },
+    }),
+  );
   assert.match(bad, /NOT BALANCED/);
 });
 

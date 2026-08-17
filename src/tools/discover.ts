@@ -5,8 +5,8 @@
 // component source: that source is proprietary and gated by a seat, and an MCP
 // server is not the place to hand it out.
 
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 // Imported, not read at runtime: the bundler inlines these snapshots into the
 // server, so it stays a single self-contained file with no data directory to ship.
 import apiData from '../data/api.json' with { type: 'json' };
@@ -43,7 +43,9 @@ export function registerDiscoveryTools(server: McpServer): void {
       description:
         "Find billing-kit's exports by name or keyword and see their signatures — Money, Quantity, " +
         'Rate, price, the metering and ledger functions, and the provider interface. Empty query lists everything.',
-      inputSchema: { query: z.string().optional().describe('A symbol name or keyword, e.g. "money", "ledger", "provider"') },
+      inputSchema: {
+        query: z.string().optional().describe('A symbol name or keyword, e.g. "money", "ledger", "provider"'),
+      },
     },
     async ({ query }) => {
       const q = (query ?? '').toLowerCase();
@@ -75,11 +77,14 @@ export function registerDiscoveryTools(server: McpServer): void {
       description:
         'List the shadcn-compatible components in billing-kit-components — pricing, usage, ledger, ' +
         'checkout and superadmin — with what each is for. Metadata only.',
-      inputSchema: { category: z.string().optional().describe('Filter by category, e.g. "pricing", "usage", "ledger"') },
+      inputSchema: {
+        category: z.string().optional().describe('Filter by category, e.g. "pricing", "usage", "ledger"'),
+      },
     },
     async ({ category }) => {
       const items = registry.items.filter(
-        (c) => c.type !== 'registry:lib' && c.type !== 'registry:hook' && (!category || c.categories.includes(category)),
+        (c) =>
+          c.type !== 'registry:lib' && c.type !== 'registry:hook' && (!category || c.categories.includes(category)),
       );
       return text(
         [
