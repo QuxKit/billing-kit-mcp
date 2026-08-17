@@ -33,7 +33,7 @@ interface Component {
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 
 export function registerDiscoveryTools(server: McpServer): void {
-  const api = apiData as { symbols: ApiSymbol[] };
+  const api = apiData as { symbols: ApiSymbol[]; exports: Record<string, { values: string[]; types: string[] }> };
   const registry = registryData as { homepage: string; items: Component[] };
 
   server.registerTool(
@@ -52,7 +52,16 @@ export function registerDiscoveryTools(server: McpServer): void {
       const hits = api.symbols.filter(
         (s) => !q || s.name.toLowerCase().includes(q) || s.summary.toLowerCase().includes(q) || s.module.includes(q),
       );
-      if (hits.length === 0) return text(`No billing-kit symbol matched "${query}".`);
+      if (hits.length === 0) {
+        // Nothing curated matched — fall back to the generated export list, so a
+        // real export with no hand-written entry is still discoverable by name.
+        const raw = Object.entries(api.exports).flatMap(([mod, e]) => [
+          ...e.values.filter((n) => n.toLowerCase().includes(q)).map((n) => `  ${n}  (value, from '${mod}')`),
+          ...e.types.filter((n) => n.toLowerCase().includes(q)).map((n) => `  ${n}  (type, from '${mod}')`),
+        ]);
+        if (raw.length === 0) return text(`No billing-kit symbol matched "${query}".`);
+        return text([`No curated entry for "${query}", but billing-kit exports:`, ...raw].join('\n'));
+      }
       return text(
         hits
           .map((s) =>

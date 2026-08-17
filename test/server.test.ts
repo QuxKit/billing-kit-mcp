@@ -105,3 +105,11 @@ test('discovery: search_api and list_components', async () => {
   const one = textOf(await client.callTool({ name: 'get_component', arguments: { name: 'pricing-table' } }));
   assert.match(one, /npx shadcn add/);
 });
+
+test('search_api falls back to the generated export list for uncurated names', async () => {
+  const client = await connect();
+  const out = textOf(await client.callTool({ name: 'search_api', arguments: { query: 'walletTopupPosting' } }));
+  assert.match(out, /walletTopupPosting\s+\(value, from '@quxkit\/billing-kit'\)/);
+  const none = textOf(await client.callTool({ name: 'search_api', arguments: { query: 'zzz-not-a-thing' } }));
+  assert.match(none, /No billing-kit symbol matched/);
+});

@@ -1,5 +1,9 @@
 {
   "homepage": "https://components.billing-kit.com",
+  "generatedFrom": {
+    "registry": "billing-kit-components",
+    "source": "registry.json via scripts/gen-discovery.mjs (metadata only — never component source)"
+  },
   "items": [
     {
       "name": "money",
