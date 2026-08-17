@@ -1,0 +1,9 @@
+{
+  "reporter": ["text", "lcov"],
+  "all": true,
+  "src": ["src"],
+  "include": ["src/**/*.ts"],
+  "exclude": ["test/**", "**/*.test.ts", "src/data/**"],
+  "reports-dir": "coverage",
+  "check-coverage": false
+}
