@@ -166,18 +166,24 @@ test('configFromEnv reads DATABASE_URL and BILLING_KIT_MCP_TENANT, blank means u
     tenantScope: undefined,
     plansPath: undefined,
     allowWrites: false,
+    http: undefined,
+    token: undefined,
   });
   assert.deepEqual(configFromEnv({ DATABASE_URL: '  ', BILLING_KIT_MCP_TENANT: '' }), {
     databaseUrl: undefined,
     tenantScope: undefined,
     plansPath: undefined,
     allowWrites: false,
+    http: undefined,
+    token: undefined,
   });
   assert.deepEqual(configFromEnv({ DATABASE_URL: 'postgres://x/y', BILLING_KIT_MCP_TENANT: 'acme ' }), {
     databaseUrl: 'postgres://x/y',
     tenantScope: 'acme',
     plansPath: undefined,
     allowWrites: false,
+    http: undefined,
+    token: undefined,
   });
 });
 

@@ -74,6 +74,19 @@ flowchart TB
     class bk a
 ```
 
+## Two transports: stdio by default, HTTP behind a bearer token
+
+```mermaid
+flowchart LR
+    l["local host<br/>Claude Desktop · Claude Code"] -->|spawn + stdio| srv
+    r["remote host<br/>hosted assistant · team deployment"] -->|"POST /mcp<br/>Authorization: Bearer"| gate
+    gate{"token set?<br/>constant-time match?"} -- no --> x["401 + WWW-Authenticate<br/>(no token at all: refuses to listen)"]
+    gate -- yes --> srv["McpServer<br/>(one per request, stateless)"]
+    srv --> pools["shared pools:<br/>read-only + (with --allow-writes) writable"]
+    classDef bad fill:#9e2b2b,stroke:#7f2222,color:#fff
+    class x bad
+```
+
 ## Why the tool exists: an assistant guessing vs. the Money type
 
 ```mermaid

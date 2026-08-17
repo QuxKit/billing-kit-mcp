@@ -15,6 +15,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { SqlExecutor } from '@quxkit/billing-kit';
 import { loadPlanCatalogue, type PlanCatalogue } from './catalogue.js';
 import { openDatabase } from './db.js';
+import { startHttp } from './http.js';
 import { registerPrompts } from './prompts.js';
 import { registerResources } from './resources.js';
 import { registerDbTools } from './tools/db.js';
@@ -100,6 +101,10 @@ export interface RuntimeConfig {
   plansPath?: string;
   /** --allow-writes or BILLING_KIT_MCP_ALLOW_WRITES=1 */
   allowWrites: boolean;
+  /** `--http :port` — serve Streamable HTTP there instead of stdio. */
+  http?: string;
+  /** BILLING_KIT_MCP_TOKEN — the bearer token HTTP requests must present. */
+  token?: string;
 }
 
 const truthy = (v: string | undefined) =>
@@ -112,7 +117,22 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env, argv: readon
     tenantScope: trimmed(env.BILLING_KIT_MCP_TENANT),
     plansPath: trimmed(env.BILLING_KIT_MCP_PLANS),
     allowWrites: argv.includes('--allow-writes') || truthy(env.BILLING_KIT_MCP_ALLOW_WRITES),
+    http: httpArg(argv),
+    token: trimmed(env.BILLING_KIT_MCP_TOKEN),
   };
+}
+
+/** `--http :3100`, `--http=:3100`, or a bare `--http` (defaults to :3100). */
+function httpArg(argv: readonly string[]): string | undefined {
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i] ?? '';
+    if (a.startsWith('--http=')) return a.slice('--http='.length) || ':3100';
+    if (a === '--http') {
+      const next = argv[i + 1];
+      return next && !next.startsWith('--') ? next : ':3100';
+    }
+  }
+  return undefined;
 }
 
 async function main(): Promise<void> {
@@ -124,23 +144,38 @@ async function main(): Promise<void> {
       ? openDatabase(config.databaseUrl, { readOnly: false, max: 2 })
       : undefined;
   const catalogue = config.plansPath ? await loadPlanCatalogue(config.plansPath) : undefined;
-  const server = createServer({
+  const serverOptions: ServerOptions = {
     db: opened?.db,
     tenantScope: config.tenantScope,
     catalogue,
     writeDb: writable?.db,
     allowWrites: config.allowWrites,
-  });
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  // stderr, never stdout — stdout is the protocol channel.
-  process.stderr.write(
-    `billing-kit-mcp: ready on stdio${opened ? ' (database connected, read-only' : ' (no database'}` +
-      `${config.tenantScope ? `, tenant ${config.tenantScope}` : ''}` +
-      `${catalogue ? `, ${catalogue.plans.size} plans` : ''}` +
-      `${writable ? ', WRITES ENABLED' : ''})\n`,
-  );
+  };
+  const status =
+    `${opened ? '(database connected, read-only' : '(no database'}` +
+    `${config.tenantScope ? `, tenant ${config.tenantScope}` : ''}` +
+    `${catalogue ? `, ${catalogue.plans.size} plans` : ''}` +
+    `${writable ? ', WRITES ENABLED' : ''})`;
+
+  let closeHttp: (() => Promise<void>) | undefined;
+  if (config.http !== undefined) {
+    // One McpServer per request (stateless); the pools above are shared.
+    const http = await startHttp({
+      listen: config.http,
+      token: config.token,
+      serverFactory: () => createServer(serverOptions),
+    });
+    closeHttp = http.close;
+    process.stderr.write(`billing-kit-mcp: ready on ${http.url} ${status}\n`);
+  } else {
+    const server = createServer(serverOptions);
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    // stderr, never stdout — stdout is the protocol channel.
+    process.stderr.write(`billing-kit-mcp: ready on stdio ${status}\n`);
+  }
   const shutdown = async () => {
+    await closeHttp?.().catch(() => undefined);
     await opened?.close().catch(() => undefined);
     await writable?.close().catch(() => undefined);
     process.exit(0);

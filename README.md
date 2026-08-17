@@ -343,9 +343,52 @@ happens to describe a problem. A host can therefore branch on the flag. An
 
 ## How it talks
 
-stdio, newline-delimited JSON-RPC — the host spawns the server and speaks over
-stdin/stdout. Logs go to **stderr**, because anything on stdout that isn't a
-protocol frame corrupts the stream.
+stdio by default, newline-delimited JSON-RPC — the host spawns the server and
+speaks over stdin/stdout. Logs go to **stderr**, because anything on stdout that
+isn't a protocol frame corrupts the stream.
+
+### Over HTTP
+
+For a host that cannot spawn a process on this machine — a hosted assistant, a
+shared team deployment — the same server speaks the MCP **Streamable HTTP**
+transport:
+
+```sh
+BILLING_KIT_MCP_TOKEN=$(openssl rand -hex 32) billing-kit-mcp --http 127.0.0.1:3100
+# -> billing-kit-mcp: listening on http://127.0.0.1:3100/mcp (Streamable HTTP, bearer auth)
+```
+
+`--http` takes `:port`, `port`, `host:port` or `[::1]:port`, and defaults to
+`:3100` when given bare. In the host config:
+
+```json
+{
+  "mcpServers": {
+    "billing-kit": {
+      "type": "http",
+      "url": "http://127.0.0.1:3100/mcp",
+      "headers": { "Authorization": "Bearer <BILLING_KIT_MCP_TOKEN>" }
+    }
+  }
+}
+```
+
+- **No token, no listener.** `--http` without `BILLING_KIT_MCP_TOKEN` refuses to
+  start. There is no unauthenticated mode, not even on loopback — the "just for
+  now" listeners are the ones that stay.
+- **Every request** must carry `Authorization: Bearer <token>`, compared in
+  **constant time**; a length mismatch still runs a comparison so it costs the
+  same. Anything else gets `401` with a `WWW-Authenticate: Bearer` challenge and
+  a one-word body. Each refusal writes a line to stderr with the peer address.
+- **Only `/mcp`** is served; every other path is `404`, checked before auth so
+  it leaks nothing about the token.
+- **Stateless.** Each request gets its own `McpServer` + transport
+  (`sessionIdGenerator: undefined`), so there is no session table to leak or to
+  guess. The database pools are shared across requests — those are what is
+  expensive.
+- Bind to loopback and put TLS in front of it (a reverse proxy) for anything
+  beyond this machine; the server speaks plain HTTP and checks a bearer token,
+  which is only as private as the transport under it.
 
 ## Tests
 

@@ -31,6 +31,12 @@ All notable changes to this project are documented here. The format follows
   when the flag is off; every attempt writes an audit line to stderr. The bin
   opens a separate writable pool only when the flag is on. `configFromEnv`
   now also reads argv.
+- **HTTP transport with bearer auth.** `--http :port` (or `host:port`, or bare
+  for `:3100`) serves the MCP SDK's Streamable HTTP transport on `/mcp`,
+  stateless, with `Authorization: Bearer` checked against
+  `BILLING_KIT_MCP_TOKEN` in constant time; without a token it refuses to
+  listen. Every other path is 404; refusals are 401 with a `WWW-Authenticate`
+  challenge and a stderr line. stdio remains the default.
 - Discovery snapshots regenerated against billing-kit `main` (adds the
   `@quxkit/billing-kit/pg` subpath, `ENTRIES_MAX_ROWS`, `RECORD_MANY_MAX`,
   the sweep types) and billing-kit-components' current registry.
