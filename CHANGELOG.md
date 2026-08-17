@@ -7,6 +7,19 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **DB-backed read tools.** With `DATABASE_URL` set the server registers
+  `query_usage`, `aggregate_usage`, `ledger_balance`, `ledger_entries`,
+  `subscription_status` and `wallet_balance`, all over billing-kit's own read
+  functions on its `./pg` executor. Every connection is pinned with
+  `SET default_transaction_read_only = on`; `tenantId` is required on every
+  call; `BILLING_KIT_MCP_TENANT` refuses any other tenant; row tools are capped
+  at 200 with an explicit `truncated` flag. README documents a read-only DB
+  role. `pg` is now a runtime dependency (external in the bundle). Tests run
+  against `billing_kit_test`, seeded through billing-kit's API; both CI
+  workflows provide Postgres and set `REQUIRE_DB=1`.
+- Discovery snapshots regenerated against billing-kit `main` (adds the
+  `@quxkit/billing-kit/pg` subpath, `ENTRIES_MAX_ROWS`, `RECORD_MANY_MAX`,
+  the sweep types) and billing-kit-components' current registry.
 - `scripts/gen-discovery.mjs` regenerates `src/data/api.json` (every export of
   each `@quxkit/billing-kit` subpath, read from its built `.d.ts`, with the
   hand-curated `symbols` preserved and validated) and `src/data/components.json`

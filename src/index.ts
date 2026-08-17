@@ -12,11 +12,26 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import type { SqlExecutor } from '@quxkit/billing-kit';
+import { openDatabase } from './db.js';
+import { registerDbTools } from './tools/db.js';
 import { registerDiscoveryTools } from './tools/discover.js';
 import { registerLedgerTools } from './tools/ledger.js';
 import { registerPriceTools } from './tools/price.js';
 
-export function createServer(): McpServer {
+export interface ServerOptions {
+  /**
+   * A read-only executor over billing-kit's schema. When present, the DB-backed
+   * read tools (query_usage, aggregate_usage, ledger_balance, ledger_entries,
+   * subscription_status, wallet_balance) are registered; without it the server
+   * is arithmetic and discovery only, exactly as before.
+   */
+  db?: SqlExecutor;
+  /** Refuse DB calls for any tenant but this one (BILLING_KIT_MCP_TENANT). */
+  tenantScope?: string;
+}
+
+export function createServer(options: ServerOptions = {}): McpServer {
   const server = new McpServer(
     { name: 'billing-kit-mcp', version: '0.1.0' },
     {
@@ -25,22 +40,53 @@ export function createServer(): McpServer {
         "they compute with billing-kit's exact Money type, so the number is correct rather than " +
         'invented. Never format an amount by dividing minor units by 100; it is wrong for a third ' +
         'of ISO 4217. check_ledger_balance verifies a double-entry posting sums to zero. ' +
-        'search_api and list_components/get_component discover the library and its UI.',
+        'search_api and list_components/get_component discover the library and its UI.' +
+        (options.db
+          ? ' The server is connected to a billing database (read-only): query_usage, aggregate_usage, ' +
+            'ledger_balance, ledger_entries, subscription_status and wallet_balance read real rows; every ' +
+            'call needs a tenantId. Use aggregate_usage / ledger_balance for totals — the row tools are capped.'
+          : ''),
     },
   );
 
   registerPriceTools(server);
   registerLedgerTools(server);
   registerDiscoveryTools(server);
+  if (options.db) registerDbTools(server, { db: options.db, tenantScope: options.tenantScope });
   return server;
 }
 
+/** What the bin reads from the environment. Exported so the tests can drive it. */
+export interface RuntimeConfig {
+  databaseUrl?: string;
+  tenantScope?: string;
+}
+
+export function configFromEnv(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
+  const trimmed = (v: string | undefined) => (v && v.trim() !== '' ? v.trim() : undefined);
+  return {
+    databaseUrl: trimmed(env.DATABASE_URL),
+    tenantScope: trimmed(env.BILLING_KIT_MCP_TENANT),
+  };
+}
+
 async function main(): Promise<void> {
-  const server = createServer();
+  const config = configFromEnv();
+  const opened = config.databaseUrl ? openDatabase(config.databaseUrl) : undefined;
+  const server = createServer({ db: opened?.db, tenantScope: config.tenantScope });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stderr, never stdout — stdout is the protocol channel.
-  process.stderr.write('billing-kit-mcp: ready on stdio\n');
+  process.stderr.write(
+    `billing-kit-mcp: ready on stdio${opened ? ' (database connected, read-only' : ' (no database'}` +
+      `${config.tenantScope ? `, tenant ${config.tenantScope}` : ''})\n`,
+  );
+  const shutdown = async () => {
+    await opened?.close().catch(() => undefined);
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 // Only run when invoked directly, so tests can import createServer without

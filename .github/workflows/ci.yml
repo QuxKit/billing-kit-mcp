@@ -29,6 +29,30 @@ jobs:
       fail-fast: false
       matrix:
         node: [20, 22]
+
+    # The DB-backed tools are tested against a real Postgres: the harness
+    # applies billing-kit's sql/*.sql to billing_kit_test and seeds through
+    # billing-kit's API. REQUIRE_DB=1 makes an unreachable database a failure
+    # rather than a skip.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: billing_kit_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      REQUIRE_DB: '1'
+      REQUIRE_DISCOVERY_SOURCES: '1'
+      BILLING_KIT_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/billing_kit_test
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,7 +98,4 @@ jobs:
       - name: Discovery snapshots are current
         run: pnpm run discovery:check
       - name: Test (with coverage)
-        env:
-          REQUIRE_DB: '1'
-          REQUIRE_DISCOVERY_SOURCES: '1'
         run: pnpm run test:coverage

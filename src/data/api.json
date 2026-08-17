@@ -10,8 +10,10 @@
       "values": [
         "BillingError",
         "DECIMAL_SCALE",
+        "ENTRIES_MAX_ROWS",
         "Money",
         "Quantity",
+        "RECORD_MANY_MAX",
         "Rate",
         "accrualPosting",
         "aggregateUsage",
@@ -82,7 +84,6 @@
         "TenantId",
         "Tier",
         "TierMode",
-        "UsageAggregate",
         "UsageAggregation",
         "UsageEvent",
         "UsageQuery",
@@ -207,10 +208,20 @@
         "SubscriptionState",
         "Subscriptions",
         "SubscriptionsOptions",
+        "SweepError",
         "SweepItem",
         "SweepOptions",
         "SweepReport",
+        "SweepRetry",
         "UsagePrice"
+      ]
+    },
+    "@quxkit/billing-kit/pg": {
+      "values": [
+        "pgExecutor"
+      ],
+      "types": [
+        "PgPoolLike"
       ]
     }
   },

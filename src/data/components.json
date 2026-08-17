@@ -19,6 +19,34 @@
       ]
     },
     {
+      "name": "format-config",
+      "title": "Format config",
+      "type": "registry:lib",
+      "description": "A React context carrying the locale and Money/Quantity formatters so a subtree formats consistently; invoice-view reads it.",
+      "categories": [
+        "core"
+      ],
+      "registryDependencies": [
+        "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "plans",
+      "title": "Plans vocabulary",
+      "type": "registry:lib",
+      "description": "The shared plan/tier vocabulary for the pricing group: the Plan shape (price is a billing-kit Money, never a number) and the declared tier rank that plan-change-control reads instead of comparing amounts.",
+      "categories": [
+        "pricing"
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
       "name": "use-usage",
       "title": "useUsage",
       "type": "registry:hook",
@@ -82,12 +110,38 @@
         "usage"
       ],
       "registryDependencies": [
-        "chart",
         "@billing-kit/use-usage"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0",
-        "recharts"
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "quota-bar",
+      "title": "Quota bar",
+      "type": "registry:ui",
+      "description": "A quota bar with ok/warning/over states. Used and limit are Quantity; the remainder and overage are exact bigint differences rendered as strings, never floats.",
+      "categories": [
+        "usage"
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "rate-display",
+      "title": "Rate display",
+      "type": "registry:ui",
+      "description": "A unit-rate readout. The amount is priced by billing-kit price() over a Rate and a block size, then formatted through money-format — never a dollars-per-unit reinterpretation of minor units.",
+      "categories": [
+        "usage"
+      ],
+      "registryDependencies": [
+        "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
       ]
     },
     {
@@ -102,7 +156,9 @@
         "card",
         "button",
         "badge",
-        "@billing-kit/money"
+        "@billing-kit/money",
+        "@billing-kit/plans",
+        "@billing-kit/plan-card"
       ],
       "dependencies": [
         "billing-kit@^0.1.0"
@@ -119,7 +175,77 @@
       "registryDependencies": [
         "card",
         "button",
+        "@billing-kit/money",
+        "@billing-kit/plans"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "plan-picker",
+      "title": "Plan picker",
+      "type": "registry:ui",
+      "description": "A radiogroup over plans. Each option shows its Money price through money-format; selection is a PlanTier, never an amount.",
+      "categories": [
+        "pricing"
+      ],
+      "registryDependencies": [
+        "radio-group",
+        "@billing-kit/money",
+        "@billing-kit/plans"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "tier-comparison",
+      "title": "Tier comparison",
+      "type": "registry:ui",
+      "description": "A feature-by-tier comparison table with a Money price row rendered through money-format.",
+      "categories": [
+        "pricing"
+      ],
+      "registryDependencies": [
+        "table",
+        "@billing-kit/money",
+        "@billing-kit/plans"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "promo-code",
+      "title": "Promo code",
+      "type": "registry:ui",
+      "description": "A promo-code entry field. The applied discount is a Money or basis-points value from the app; the component displays it via money-format and never computes a discounted price itself.",
+      "categories": [
+        "pricing"
+      ],
+      "registryDependencies": [
+        "button",
+        "input",
+        "label",
         "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "plan-change-control",
+      "title": "Plan change control",
+      "type": "registry:ui",
+      "description": "Upgrade/downgrade confirmation between two plans. Direction comes from the declared tier rank in plans, not from comparing prices; the delta is Money.minus within one currency.",
+      "categories": [
+        "pricing"
+      ],
+      "registryDependencies": [
+        "button",
+        "@billing-kit/money",
+        "@billing-kit/plans"
       ],
       "dependencies": [
         "billing-kit@^0.1.0"
@@ -154,7 +280,8 @@
       "registryDependencies": [
         "table",
         "separator",
-        "@billing-kit/money"
+        "@billing-kit/money",
+        "@billing-kit/format-config"
       ],
       "dependencies": [
         "billing-kit@^0.1.0"
@@ -188,32 +315,97 @@
       "registryDependencies": [
         "card",
         "button",
+        "label",
         "radio-group",
-        "@billing-kit/money",
-        "@billing-kit/plan-card"
+        "@billing-kit/money"
       ],
       "dependencies": [
         "billing-kit@^0.1.0"
       ]
     },
     {
-      "name": "admin-console",
-      "title": "Superadmin console",
-      "type": "registry:block",
-      "description": "An operator view over tenants, their balances and settlement status. Reads across billing-kit balance and settlement; gated in the host app by the operator's own role, which the block asserts but does not define.",
+      "name": "stripe-payment-fields",
+      "title": "Stripe payment fields",
+      "type": "registry:ui",
+      "description": "Stripe Elements hosted fields; raw card data never touches the component or your server. Confirms a SetupIntent/PaymentIntent the app created via a BillingProvider.",
+      "categories": [
+        "checkout"
+      ],
+      "registryDependencies": [
+        "button"
+      ],
+      "dependencies": [
+        "@stripe/react-stripe-js",
+        "@stripe/stripe-js"
+      ]
+    },
+    {
+      "name": "paddle-checkout",
+      "title": "Paddle checkout",
+      "type": "registry:ui",
+      "description": "Paddle.js hosted checkout overlay/inline; the component opens the checkout for a price the app resolved and reports completion, never capturing payment itself.",
+      "categories": [
+        "checkout"
+      ],
+      "registryDependencies": [],
+      "dependencies": [
+        "@paddle/paddle-js"
+      ]
+    },
+    {
+      "name": "price-editor",
+      "title": "Price editor",
+      "type": "registry:ui",
+      "description": "Superadmin price editor. Prices are versioned and never mutated in place; a draft is a Money via Money.fromDecimalString and a Rate via Rate.fromDecimalString, both exact.",
       "categories": [
         "superadmin"
       ],
       "registryDependencies": [
-        "table",
-        "tabs",
         "badge",
-        "@billing-kit/money",
-        "@billing-kit/ledger-table"
+        "button",
+        "card",
+        "input",
+        "label",
+        "@billing-kit/money"
       ],
       "dependencies": [
         "billing-kit@^0.1.0"
       ]
+    },
+    {
+      "name": "promo-manager",
+      "title": "Promo manager",
+      "type": "registry:ui",
+      "description": "Superadmin promo-code manager. Codes carry redemption caps and expiry as first-class fields; amount discounts are Money through money-format.",
+      "categories": [
+        "superadmin"
+      ],
+      "registryDependencies": [
+        "badge",
+        "button",
+        "input",
+        "label",
+        "table",
+        "@billing-kit/money"
+      ],
+      "dependencies": [
+        "billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "entitlement-toggles",
+      "title": "Entitlement toggles",
+      "type": "registry:ui",
+      "description": "Superadmin per-tenant entitlement switches. Emits toggle intents; the app owns the entitlement store (this is not the seat gate).",
+      "categories": [
+        "superadmin"
+      ],
+      "registryDependencies": [
+        "badge",
+        "label",
+        "switch"
+      ],
+      "dependencies": []
     }
   ]
 }

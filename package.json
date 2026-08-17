@@ -17,20 +17,21 @@
   },
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --external:@quxkit/billing-kit --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --external:@quxkit/billing-kit --external:pg --outfile=dist/index.js --banner:js=\"#!/usr/bin/env node\"",
     "start": "node dist/index.js",
     "lint": "biome check .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "pretest": "pnpm run build",
-    "test": "node --import tsx --test test/*.test.ts",
-    "test:coverage": "c8 node --import tsx --test test/*.test.ts",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
+    "test:coverage": "c8 node --import tsx --test --test-concurrency=1 test/*.test.ts",
     "discovery:gen": "node scripts/gen-discovery.mjs",
     "discovery:check": "node scripts/gen-discovery.mjs --check",
     "prepublishOnly": "pnpm run lint && pnpm run typecheck && pnpm run build && pnpm test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "pg": "^8.23.0",
     "zod": "^3.23.0"
   },
   "peerDependencies": {
@@ -40,6 +41,7 @@
     "@biomejs/biome": "^2.5.8",
     "@quxkit/billing-kit": "link:../billing-kit",
     "@types/node": "^22.9.0",
+    "@types/pg": "^8.21.0",
     "c8": "^12.0.0",
     "esbuild": "^0.28.2",
     "tsx": "^4.19.2",
