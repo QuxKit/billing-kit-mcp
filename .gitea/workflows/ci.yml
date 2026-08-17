@@ -23,11 +23,20 @@ jobs:
     env:
       REQUIRE_DB: '1'
       REQUIRE_DISCOVERY_SOURCES: '1'
+      # The runner's local Postgres; the harness rebuilds billing.* there from
+      # billing-kit's sql/*.sql. `createdb billing_kit_test` once on the host.
+      BILLING_KIT_TEST_DATABASE_URL: postgres://localhost:5432/billing_kit_test
     steps:
-      - name: Put node / pnpm on PATH
+      - name: Put node / pnpm / psql on PATH
         run: |
           ls -d "$HOME"/.nvm/versions/node/*/bin | tail -1 >> "$GITHUB_PATH"
-          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          if command -v brew >/dev/null 2>&1; then
+            echo "$(brew --prefix postgresql@17)/bin" >> "$GITHUB_PATH"
+            echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          fi
+
+      - name: Ensure the test database exists
+        run: createdb billing_kit_test 2>/dev/null || true
 
       - name: Checkout the MCP server and its siblings
         run: |

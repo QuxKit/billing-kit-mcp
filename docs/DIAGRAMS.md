@@ -20,6 +20,24 @@ flowchart LR
     class bk a
 ```
 
+## The database-backed tools: read-only, tenant-scoped, capped
+
+```mermaid
+flowchart TB
+    call["tool call<br/>{ tenantId, subjectId, ... }"]
+    call --> t1{"tenantId present?"}
+    t1 -- no --> e1["schema error"]
+    t1 -- yes --> t2{"BILLING_KIT_MCP_TENANT<br/>set and different?"}
+    t2 -- yes --> e2["isError: outside scope"]
+    t2 -- no --> bk["billing-kit read function<br/>queryUsage · aggregateUsage · balance<br/>entries · walletBalance · getSubscription"]
+    bk --> pool["pg.Pool<br/>SET default_transaction_read_only = on<br/>on every connection"]
+    pool --> pg[("billing.* — INSERT refused")]
+    classDef a fill:#0d9488,stroke:#0f766e,color:#fff
+    classDef bad fill:#9e2b2b,stroke:#7f2222,color:#fff
+    class bk a
+    class e1,e2 bad
+```
+
 ## Why the tool exists: an assistant guessing vs. the Money type
 
 ```mermaid

@@ -8,7 +8,9 @@
 
 An [MCP](https://modelcontextprotocol.io) server that gives an AI assistant
 billing-kit's real capabilities: **exact money math**, a **double-entry balance
-check**, and **discovery** of the API and the UI components.
+check**, **discovery** of the API and the UI components, and — with a
+`DATABASE_URL` — **read-only answers from a real billing database** (usage,
+aggregates, ledger balances and entries, wallets, subscription state).
 
 The point is the first one. Ask a model to price 1,234,567 tokens at $0.0000012
 and it will happily invent a number with `qty * rate / 100` — which is wrong for
@@ -25,11 +27,18 @@ floating-point error can't touch.
                                    │  check_ledger_balance     │
                                    │  search_api               │
                                    │  list_components          │
-                                   └─────────────┬─────────────┘
-                                                 │ exact arithmetic
-                                                 ▼
-                                   @quxkit/billing-kit
-                                   Money · Quantity · Rate · price
+                                   │  ── with DATABASE_URL ──  │
+                                   │  query_usage              │
+                                   │  aggregate_usage          │
+                                   │  ledger_balance/entries   │
+                                   │  wallet_balance           │
+                                   │  subscription_status      │
+                                   └──────┬────────────┬───────┘
+                                          │ exact      │ read-only
+                                          │ arithmetic │ SqlExecutor
+                                          ▼            ▼
+                                   @quxkit/billing-kit   Postgres (billing.*)
+                                   Money · Quantity      SET default_transaction_read_only
 ```
 
 _Rendered diagrams (mermaid): [docs/DIAGRAMS.md](https://github.com/QuxKit/billing-kit-mcp/blob/main/docs/DIAGRAMS.md)._
@@ -62,6 +71,17 @@ float can't touch it.
 | `check_ledger_balance` | Verify a double-entry transaction's legs sum to zero per currency — the invariant billing-kit's ledger enforces. |
 | `search_api` | Find billing-kit's exports and signatures — `Money`, `price`, the metering and ledger functions, the provider interface. |
 | `list_components` / `get_component` | Discover the shadcn-compatible UI. Metadata and the install command only — never the (proprietary) component source. |
+
+With `DATABASE_URL` set, six more (see [Database-backed tools](#database-backed-tools)):
+
+| Tool | What it does |
+|---|---|
+| `query_usage` | A subject's raw usage events in `[since, until)`, oldest first, capped at 200 rows and honest about it (`truncated: true`). |
+| `aggregate_usage` | One exact quantity for a metric over a window — `sum` / `count` / `max` / `unique` — computed in Postgres by billing-kit. |
+| `ledger_balance` | The balance of one account (`customer_balance`, `revenue_accrued`, `cash`, `customer_credit`, …) for a subject in a currency. |
+| `ledger_entries` | A subject's ledger entries, optionally for one account and window, capped at 200. |
+| `wallet_balance` | Prepaid credit available, as a positive amount. |
+| `subscription_status` | A subscription's persisted state by id or by creation key: plan, state, seats, current period, trial end. |
 
 ## Install
 
@@ -111,6 +131,93 @@ Then ask, in plain language:
 > *"Do these ledger legs balance: customer_balance +19.99, revenue_accrued −19.99?"*
 > → `check_ledger_balance` → **BALANCED ✓**
 
+## Database-backed tools
+
+Point the server at a billing-kit database and it can answer questions about
+*this* customer rather than about arithmetic in general:
+
+```sh
+DATABASE_URL=postgres://billing_ro@db.internal/billing billing-kit-mcp
+# optionally pin every call to one tenant:
+BILLING_KIT_MCP_TENANT=acme DATABASE_URL=... billing-kit-mcp
+```
+
+Or in the host config:
+
+```json
+{
+  "mcpServers": {
+    "billing-kit": {
+      "command": "billing-kit-mcp",
+      "env": { "DATABASE_URL": "postgres://billing_ro@db.internal/billing" }
+    }
+  }
+}
+```
+
+Then:
+
+> *"How many input tokens did org_42 use in tenant acme this month?"*
+> → `aggregate_usage` → `{ quantity: "1234567", eventCount: 8812 }`
+
+> *"What does org_42 owe right now?"*
+> → `ledger_balance customer_balance USD` → `{ balance: "19.99" }`
+
+The rules, in the order they matter:
+
+```
+ assistant ──▶ tool call { tenantId, subjectId, ... }
+                 │
+                 ├─ tenantId missing? ──▶ schema error (no cross-tenant read exists)
+                 ├─ BILLING_KIT_MCP_TENANT set and ≠ tenantId? ──▶ isError
+                 │
+                 ▼
+             billing-kit read function (queryUsage, aggregateUsage,
+             balance, entries, walletBalance, getSubscription)
+                 │
+                 ▼
+             pg.Pool ─ every connection: SET default_transaction_read_only = on
+                 │
+                 ▼
+             billing.* tables    (an INSERT here is refused by Postgres)
+```
+
+- **Read-only, twice.** Every connection the server opens runs
+  `SET default_transaction_read_only = on` before it serves a query, so a
+  write — a tool bug, or a prompt injection that talks the assistant into one
+  — is refused by Postgres. That is per-session and a superuser could undo it,
+  so also connect as a **read-only role** (see below). Nothing here writes.
+- **Tenant id on every call.** There is no "all tenants" read; the schema
+  requires `tenantId`. `BILLING_KIT_MCP_TENANT` additionally refuses any call
+  that names another tenant, for one-server-per-tenant deployments.
+- **Capped and honest.** Row-returning tools take `limit` (1..200, default 50)
+  and return `truncated: true` plus a hint when more rows exist. The instructions
+  tell the assistant to use `aggregate_usage` / `ledger_balance` for totals and
+  never to sum a page — those two run billing-kit's exact `SUM` in Postgres.
+- **billing-kit's numbers.** Quantities and amounts are billing-kit's exact
+  decimal strings (`"19.99"`, `"1234567"`, plus `minorUnits`); no float is
+  involved anywhere in the path.
+- **Typed failures.** A billing-kit error surfaces as `isError: true` with its
+  code in the text (`window_invalid`, `invalid_subscription`, …).
+
+### Read-only role
+
+Create a role that can read `billing.*` and nothing else, and hand *that* to
+`DATABASE_URL`:
+
+```sql
+CREATE ROLE billing_ro LOGIN PASSWORD '...';
+GRANT CONNECT ON DATABASE billing TO billing_ro;
+GRANT USAGE ON SCHEMA billing TO billing_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA billing TO billing_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA billing GRANT SELECT ON TABLES TO billing_ro;
+-- belt and braces: even a session that unset the flag stays read-only
+ALTER ROLE billing_ro SET default_transaction_read_only = on;
+```
+
+The schema is billing-kit's (`@quxkit/billing-kit/sql/*.sql`); the server does
+not create or migrate anything.
+
 ## Errors
 
 A tool that cannot do what was asked (an unparseable quantity, a bad currency,
@@ -130,7 +237,16 @@ protocol frame corrupts the stream.
 
 ```sh
 pnpm test           # builds first, then drives the server in-memory and over stdio
+createdb billing_kit_test && REQUIRE_DB=1 pnpm test   # ...plus the DB-backed tools
 ```
+
+The DB-backed tools are tested against a real Postgres (`billing_kit_test` by
+default; `BILLING_KIT_TEST_DATABASE_URL` to point elsewhere). The harness
+rebuilds `billing.*` from the SQL files billing-kit ships, seeds through
+billing-kit's own API (`record`, `post`, `createSubscription`), and reads back
+through the server on the same read-only connection the bin opens — including
+a probe that an `INSERT` on that connection is refused. Without a reachable
+database the suite skips; with `REQUIRE_DB=1` (CI) it fails instead.
 
 The suite drives the server through a real MCP `Client` over an in-memory
 transport — the same code path a host uses — asserting that `price_usage`
