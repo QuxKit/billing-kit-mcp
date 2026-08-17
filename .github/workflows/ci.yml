@@ -1,0 +1,80 @@
+# CI — lint, typecheck, build, test (with coverage) and the discovery-drift
+# check, on Node 20 and 22.
+#
+# This server dev-links `../billing-kit` and reads `../billing-kit-components/
+# registry.json`, so both siblings are checked out next to it. They are private
+# repos: set a QUXKIT_READ_TOKEN secret (a fine-grained PAT with contents:read
+# on QuxKit/billing-kit and QuxKit/billing-kit-components); without it the
+# sibling checkouts fall back to GITHUB_TOKEN, which cannot read other repos,
+# and this workflow fails at the checkout step rather than testing a lie.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Nightly, so a billing-kit / registry change is caught within a day even
+  # though it lives in another repo.
+  schedule:
+    - cron: '41 6 * * *'
+
+defaults:
+  run:
+    working-directory: billing-kit-mcp
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: billing-kit-mcp
+
+      - name: Checkout billing-kit (linked as ../billing-kit)
+        uses: actions/checkout@v4
+        with:
+          repository: QuxKit/billing-kit
+          path: billing-kit
+          token: ${{ secrets.QUXKIT_READ_TOKEN || github.token }}
+
+      - name: Checkout billing-kit-components (registry.json for discovery)
+        uses: actions/checkout@v4
+        with:
+          repository: QuxKit/billing-kit-components
+          path: billing-kit-components
+          token: ${{ secrets.QUXKIT_READ_TOKEN || github.token }}
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+          cache-dependency-path: |
+            billing-kit-mcp/pnpm-lock.yaml
+            billing-kit/pnpm-lock.yaml
+
+      - name: Build billing-kit (the peer this server prices with)
+        working-directory: billing-kit
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm run lint
+      - name: Typecheck
+        run: pnpm run typecheck
+      - name: Build
+        run: pnpm run build
+      - name: Discovery snapshots are current
+        run: pnpm run discovery:check
+      - name: Test (with coverage)
+        env:
+          REQUIRE_DB: '1'
+          REQUIRE_DISCOVERY_SOURCES: '1'
+        run: pnpm run test:coverage

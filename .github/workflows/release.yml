@@ -1,0 +1,54 @@
+# Release — on a v* tag: build, test, publish to npm with provenance.
+# Needs an NPM_TOKEN secret (automation token). Tags are cut by hand.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+defaults:
+  run:
+    working-directory: billing-kit-mcp
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: billing-kit-mcp
+      - uses: actions/checkout@v4
+        with:
+          repository: QuxKit/billing-kit
+          path: billing-kit
+          token: ${{ secrets.QUXKIT_READ_TOKEN || github.token }}
+      - uses: actions/checkout@v4
+        with:
+          repository: QuxKit/billing-kit-components
+          path: billing-kit-components
+          token: ${{ secrets.QUXKIT_READ_TOKEN || github.token }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: billing-kit-mcp/pnpm-lock.yaml
+          registry-url: https://registry.npmjs.org
+      - name: Build billing-kit
+        working-directory: billing-kit
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm run build
+      - run: pnpm run discovery:check
+      - run: pnpm test
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance
