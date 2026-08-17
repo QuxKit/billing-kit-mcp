@@ -13,7 +13,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { SqlExecutor } from '@quxkit/billing-kit';
+import { loadPlanCatalogue, type PlanCatalogue } from './catalogue.js';
 import { openDatabase } from './db.js';
+import { registerPrompts } from './prompts.js';
+import { registerResources } from './resources.js';
 import { registerDbTools } from './tools/db.js';
 import { registerDiscoveryTools } from './tools/discover.js';
 import { registerLedgerTools } from './tools/ledger.js';
@@ -29,6 +32,10 @@ export interface ServerOptions {
   db?: SqlExecutor;
   /** Refuse DB calls for any tenant but this one (BILLING_KIT_MCP_TENANT). */
   tenantScope?: string;
+  /** The operator's plans (BILLING_KIT_MCP_PLANS), served as billing://plans and used by explain-charge. */
+  catalogue?: PlanCatalogue;
+  /** Where billing-kit's SQL is read from for billing://schema; defaults to the installed package. */
+  sqlDir?: string;
 }
 
 export function createServer(options: ServerOptions = {}): McpServer {
@@ -40,7 +47,10 @@ export function createServer(options: ServerOptions = {}): McpServer {
         "they compute with billing-kit's exact Money type, so the number is correct rather than " +
         'invented. Never format an amount by dividing minor units by 100; it is wrong for a third ' +
         'of ISO 4217. check_ledger_balance verifies a double-entry posting sums to zero. ' +
-        'search_api and list_components/get_component discover the library and its UI.' +
+        'search_api and list_components/get_component discover the library and its UI. ' +
+        'Resources: billing://schema is the SQL schema' +
+        (options.catalogue ? ', billing://plans is the plan catalogue' : '') +
+        '. The explain-charge prompt walks a subscription period charge.' +
         (options.db
           ? ' The server is connected to a billing database (read-only): query_usage, aggregate_usage, ' +
             'ledger_balance, ledger_entries, subscription_status and wallet_balance read real rows; every ' +
@@ -53,6 +63,8 @@ export function createServer(options: ServerOptions = {}): McpServer {
   registerLedgerTools(server);
   registerDiscoveryTools(server);
   if (options.db) registerDbTools(server, { db: options.db, tenantScope: options.tenantScope });
+  registerResources(server, { catalogue: options.catalogue, sqlDir: options.sqlDir });
+  registerPrompts(server, { db: options.db, tenantScope: options.tenantScope, catalogue: options.catalogue });
   return server;
 }
 
@@ -60,6 +72,7 @@ export function createServer(options: ServerOptions = {}): McpServer {
 export interface RuntimeConfig {
   databaseUrl?: string;
   tenantScope?: string;
+  plansPath?: string;
 }
 
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
@@ -67,19 +80,22 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): RuntimeConf
   return {
     databaseUrl: trimmed(env.DATABASE_URL),
     tenantScope: trimmed(env.BILLING_KIT_MCP_TENANT),
+    plansPath: trimmed(env.BILLING_KIT_MCP_PLANS),
   };
 }
 
 async function main(): Promise<void> {
   const config = configFromEnv();
   const opened = config.databaseUrl ? openDatabase(config.databaseUrl) : undefined;
-  const server = createServer({ db: opened?.db, tenantScope: config.tenantScope });
+  const catalogue = config.plansPath ? await loadPlanCatalogue(config.plansPath) : undefined;
+  const server = createServer({ db: opened?.db, tenantScope: config.tenantScope, catalogue });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stderr, never stdout — stdout is the protocol channel.
   process.stderr.write(
     `billing-kit-mcp: ready on stdio${opened ? ' (database connected, read-only' : ' (no database'}` +
-      `${config.tenantScope ? `, tenant ${config.tenantScope}` : ''})\n`,
+      `${config.tenantScope ? `, tenant ${config.tenantScope}` : ''}` +
+      `${catalogue ? `, ${catalogue.plans.size} plans` : ''})\n`,
   );
   const shutdown = async () => {
     await opened?.close().catch(() => undefined);

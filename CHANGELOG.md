@@ -17,6 +17,13 @@ All notable changes to this project are documented here. The format follows
   role. `pg` is now a runtime dependency (external in the bundle). Tests run
   against `billing_kit_test`, seeded through billing-kit's API; both CI
   workflows provide Postgres and set `REQUIRE_DB=1`.
+- **Resources and a prompt.** `billing://schema` (billing-kit's `sql/*.sql`
+  from the installed package, plus `billing://schema/{file}`), `billing://plans`
+  (the operator's catalogue from `BILLING_KIT_MCP_PLANS` — JSON or a JS module,
+  hydrated through `definePlan`), and the `explain-charge` prompt, which walks a
+  subscription's current-period charge (subscription, plan, per-metric usage,
+  `chargeForPeriod` lines, ledger postings and balance) when a database is
+  connected and hands back the procedure otherwise.
 - Discovery snapshots regenerated against billing-kit `main` (adds the
   `@quxkit/billing-kit/pg` subpath, `ENTRIES_MAX_ROWS`, `RECORD_MANY_MAX`,
   the sweep types) and billing-kit-components' current registry.

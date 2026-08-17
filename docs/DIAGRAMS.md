@@ -38,6 +38,21 @@ flowchart TB
     class e1,e2 bad
 ```
 
+## explain-charge: what the prompt walks
+
+```mermaid
+flowchart LR
+    p["explain-charge<br/>{ tenantId, subscription }"]
+    p --> s["getSubscription<br/>plan id · seats · period · trial"]
+    p --> c["billing://plans<br/>base · seats · included · overage"]
+    p --> u["aggregateUsage<br/>per metered metric, over the period"]
+    s & c & u --> ch["chargeForPeriod<br/>flat / seats / usage / discount → total"]
+    p --> l["entries + balance<br/>charge postings · owed now"]
+    ch & l --> m["one user message:<br/>the exact figures + 'explain each line'"]
+    classDef a fill:#0d9488,stroke:#0f766e,color:#fff
+    class ch a
+```
+
 ## Why the tool exists: an assistant guessing vs. the Money type
 
 ```mermaid

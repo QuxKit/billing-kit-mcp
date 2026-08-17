@@ -10,7 +10,9 @@ An [MCP](https://modelcontextprotocol.io) server that gives an AI assistant
 billing-kit's real capabilities: **exact money math**, a **double-entry balance
 check**, **discovery** of the API and the UI components, and — with a
 `DATABASE_URL` — **read-only answers from a real billing database** (usage,
-aggregates, ledger balances and entries, wallets, subscription state).
+aggregates, ledger balances and entries, wallets, subscription state). It also
+serves the **plan catalogue** and the **SQL schema** as resources, and an
+**`explain-charge`** prompt that walks a subscription's period charge.
 
 The point is the first one. Ask a model to price 1,234,567 tokens at $0.0000012
 and it will happily invent a number with `qty * rate / 100` — which is wrong for
@@ -199,6 +201,70 @@ The rules, in the order they matter:
   involved anywhere in the path.
 - **Typed failures.** A billing-kit error surfaces as `isError: true` with its
   code in the text (`window_invalid`, `invalid_subscription`, …).
+
+## Resources and prompts
+
+| Resource | What it is |
+|---|---|
+| `billing://plans` | The operator's plan catalogue, from the file named by `BILLING_KIT_MCP_PLANS` (see below). Absent when no catalogue is configured. |
+| `billing://schema` | billing-kit's shipped SQL (`sql/*.sql`) concatenated in apply order, read from the installed `@quxkit/billing-kit` — the DDL of the very version this server prices with. |
+| `billing://schema/{file}` | One of those files (`billing://schema/001_core.sql`, …); the template lists them. |
+
+| Prompt | Arguments | What it does |
+|---|---|---|
+| `explain-charge` | `tenantId`, `subscription` (id or creation key) | Walks the subscription's current-period charge and asks the assistant to explain it. With a database it does the walk itself — subscription state, the plan from the catalogue, `aggregate_usage` per metered metric over the period, the lines `chargeForPeriod` computes, the charge postings and balance in the ledger — and embeds those exact figures. Without one it hands back the same walk as a procedure over the tools. |
+
+```
+ explain-charge { tenantId, subscription }
+   │
+   ├─ subscription_status ─── plan id, seats, period, trial
+   ├─ billing://plans ─────── base, seats, included, overage price
+   ├─ aggregate_usage ─────── per metered metric over the period
+   ├─ chargeForPeriod ─────── lines: flat / seats / usage / discount, total
+   └─ ledger_entries + ledger_balance ── what was posted, what is owed
+        ▼
+   "Explain each line, quoting these exact figures."
+```
+
+### The plan catalogue
+
+billing-kit does not persist plans — the catalogue is the application's, held
+in code. Point the server at it and the assistant can read what `team` costs:
+
+```sh
+BILLING_KIT_MCP_PLANS=./plans.json billing-kit-mcp
+```
+
+A `.json` file (an array, or `{ "plans": [...] }`), or a `.js` / `.mjs` module
+whose default (or `plans`) export is the same shape:
+
+```json
+{
+  "plans": [
+    {
+      "id": "team", "name": "Team",
+      "currency": "USD", "interval": "month",
+      "flat": "49.00",
+      "seats": { "unit": "10.00", "min": 1 },
+      "usage": [
+        { "metric": "tokens.input", "included": "1000000",
+          "price": { "kind": "flat", "rate": "0.00012" } },
+        { "metric": "gb_hours",
+          "price": { "kind": "tiered", "mode": "graduated",
+                     "tiers": [ { "upTo": "100", "rate": "5" }, { "upTo": null, "rate": "3" } ] } }
+      ],
+      "trialDays": 14
+    }
+  ]
+}
+```
+
+Amounts (`flat`, `seats.unit`, tier `flat`) are decimal strings in the plan's
+currency; `included` / `upTo` are decimal quantities; `rate` is minor units per
+unit — billing-kit's own conventions, no floats. Every entry is hydrated through
+billing-kit's `definePlan`, so an invalid catalogue is refused at startup with
+billing-kit's reason (`invalid_plan`, `unknown_currency`, …) rather than
+mis-pricing later. `name` and `description` are free-form and served as-is.
 
 ### Read-only role
 
