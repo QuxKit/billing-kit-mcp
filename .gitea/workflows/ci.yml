@@ -1,55 +1,58 @@
-# CI — typecheck, build and test the MCP server on every push and PR.
+# CI — lint, typecheck, build, test (with coverage) and the discovery-drift
+# check on every push and PR, on the self-hosted `host` runner (brett-local).
 #
-# The MCP server links billing-kit (`link:../billing-kit`) and bundles its built
-# output, so CI fetches billing-kit as a sibling and builds it first. Host runner
-# (brett-local): node (nvm), pnpm and git are already there; no external actions.
+# The MCP server links billing-kit (`link:../billing-kit`) as its peer and reads
+# billing-kit-components' registry.json for discovery, so CI clones both as
+# siblings and builds billing-kit first. The runner has node (nvm), pnpm and git
+# already; no external actions (there is no action registry), so checkout is a
+# plain git clone with the job token. Paths are derived, not hard-coded.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
-  # Nightly, so a billing-kit change is caught here within a day even though it
-  # lives in another repo — the MCP bundles billing-kit's built output.
+  # Nightly, so a billing-kit / registry change is caught here within a day even
+  # though it lives in another repo.
   schedule:
     - cron: '41 6 * * *'
 
 jobs:
   verify:
     runs-on: host
+    env:
+      REQUIRE_DB: '1'
+      REQUIRE_DISCOVERY_SOURCES: '1'
     steps:
       - name: Put node / pnpm on PATH
         run: |
-          ls -d /Users/ezyp/.nvm/versions/node/*/bin | tail -1 >> "$GITHUB_PATH"
-          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
+          ls -d "$HOME"/.nvm/versions/node/*/bin | tail -1 >> "$GITHUB_PATH"
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
 
-      - name: Checkout the MCP server and its billing-kit sibling
+      - name: Checkout the MCP server and its siblings
         run: |
           set -euo pipefail
           WS="$(mktemp -d)"
           echo "WS=$WS" >> "$GITHUB_ENV"
           git clone -q "http://token:${{ github.token }}@localhost:3003/${{ github.repository }}.git" "$WS/billing-kit-mcp"
           ( cd "$WS/billing-kit-mcp" && git checkout -q "${{ github.sha }}" )
-          # billing-kit at its latest main — the MCP bundles its built output.
-          git clone -q --depth 1 "http://localhost:3003/brett/billing-kit.git" "$WS/billing-kit"
+          # Siblings at their latest main — billing-kit is the peer this server
+          # prices with; billing-kit-components supplies registry.json.
+          git clone -q --depth 1 "http://token:${{ github.token }}@localhost:3003/brett/billing-kit.git" "$WS/billing-kit"
+          git clone -q --depth 1 "http://token:${{ github.token }}@localhost:3003/brett/billing-kit-components.git" "$WS/billing-kit-components"
 
-      - name: Build billing-kit (the MCP bundles it)
+      - name: Build billing-kit
         run: |
           cd "$WS/billing-kit"
-          pnpm install
+          pnpm install --frozen-lockfile
           pnpm run build
 
-      - name: Typecheck, build and test the MCP server
-        # The binaries are invoked directly rather than via `pnpm run`: pnpm 11
-        # re-verifies dependencies before every `run`, which fails in CI on the
-        # esbuild build-script approval gate. Install once, then run the tools —
-        # the build command mirrors the "build" script in package.json.
+      - name: Install, lint, typecheck, build, discovery:check, test with coverage
         run: |
           cd "$WS/billing-kit-mcp"
-          # strict-dep-builds=false: esbuild's build script is "ignored" (its
-          # binary comes from the platform package in the store, so it runs fine
-          # without it), and without this pnpm 11 exits 1 on that alone.
-          pnpm install --config.strict-dep-builds=false
-          node_modules/.bin/tsc --noEmit
-          node_modules/.bin/esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --banner:js="#!/usr/bin/env node"
-          node --import tsx --test test/*.test.ts
+          pnpm install --frozen-lockfile
+          pnpm run lint
+          pnpm run typecheck
+          pnpm run build
+          pnpm run discovery:check
+          pnpm run test:coverage

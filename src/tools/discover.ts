@@ -5,8 +5,8 @@
 // component source: that source is proprietary and gated by a seat, and an MCP
 // server is not the place to hand it out.
 
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 // Imported, not read at runtime: the bundler inlines these snapshots into the
 // server, so it stays a single self-contained file with no data directory to ship.
 import apiData from '../data/api.json' with { type: 'json' };
@@ -31,9 +31,12 @@ interface Component {
 }
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
+// A tool failure is signalled with isError per the MCP spec, so a host can tell
+// a priced amount from an error message instead of parsing prose.
+const failure = (s: string) => ({ isError: true as const, content: [{ type: 'text' as const, text: s }] });
 
 export function registerDiscoveryTools(server: McpServer): void {
-  const api = apiData as { symbols: ApiSymbol[] };
+  const api = apiData as { symbols: ApiSymbol[]; exports: Record<string, { values: string[]; types: string[] }> };
   const registry = registryData as { homepage: string; items: Component[] };
 
   server.registerTool(
@@ -43,14 +46,25 @@ export function registerDiscoveryTools(server: McpServer): void {
       description:
         "Find billing-kit's exports by name or keyword and see their signatures — Money, Quantity, " +
         'Rate, price, the metering and ledger functions, and the provider interface. Empty query lists everything.',
-      inputSchema: { query: z.string().optional().describe('A symbol name or keyword, e.g. "money", "ledger", "provider"') },
+      inputSchema: {
+        query: z.string().optional().describe('A symbol name or keyword, e.g. "money", "ledger", "provider"'),
+      },
     },
     async ({ query }) => {
       const q = (query ?? '').toLowerCase();
       const hits = api.symbols.filter(
         (s) => !q || s.name.toLowerCase().includes(q) || s.summary.toLowerCase().includes(q) || s.module.includes(q),
       );
-      if (hits.length === 0) return text(`No billing-kit symbol matched "${query}".`);
+      if (hits.length === 0) {
+        // Nothing curated matched — fall back to the generated export list, so a
+        // real export with no hand-written entry is still discoverable by name.
+        const raw = Object.entries(api.exports).flatMap(([mod, e]) => [
+          ...e.values.filter((n) => n.toLowerCase().includes(q)).map((n) => `  ${n}  (value, from '${mod}')`),
+          ...e.types.filter((n) => n.toLowerCase().includes(q)).map((n) => `  ${n}  (type, from '${mod}')`),
+        ]);
+        if (raw.length === 0) return text(`No billing-kit symbol matched "${query}".`);
+        return text([`No curated entry for "${query}", but billing-kit exports:`, ...raw].join('\n'));
+      }
       return text(
         hits
           .map((s) =>
@@ -75,11 +89,14 @@ export function registerDiscoveryTools(server: McpServer): void {
       description:
         'List the shadcn-compatible components in billing-kit-components — pricing, usage, ledger, ' +
         'checkout and superadmin — with what each is for. Metadata only.',
-      inputSchema: { category: z.string().optional().describe('Filter by category, e.g. "pricing", "usage", "ledger"') },
+      inputSchema: {
+        category: z.string().optional().describe('Filter by category, e.g. "pricing", "usage", "ledger"'),
+      },
     },
     async ({ category }) => {
       const items = registry.items.filter(
-        (c) => c.type !== 'registry:lib' && c.type !== 'registry:hook' && (!category || c.categories.includes(category)),
+        (c) =>
+          c.type !== 'registry:lib' && c.type !== 'registry:hook' && (!category || c.categories.includes(category)),
       );
       return text(
         [
@@ -110,7 +127,7 @@ export function registerDiscoveryTools(server: McpServer): void {
           .map((i) => i.name)
           .filter((n) => n.includes(name) || name.includes(n))
           .slice(0, 5);
-        return text(`No component named "${name}".${near.length ? ` Did you mean: ${near.join(', ')}?` : ''}`);
+        return failure(`No component named "${name}".${near.length ? ` Did you mean: ${near.join(', ')}?` : ''}`);
       }
       return text(
         [

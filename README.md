@@ -65,13 +65,25 @@ float can't touch it.
 
 ## Install
 
+From npm — the server and the library it prices with, side by side:
+
 ```sh
-npm install
-npm run build        # bundles to a single self-contained dist/index.js
+npm i -g @quxkit/billing-kit-mcp @quxkit/billing-kit
+billing-kit-mcp          # speaks MCP over stdio; logs go to stderr
 ```
 
-The build inlines billing-kit and the data snapshots, so `dist/index.js` runs on
-plain `node` with no dependency tree to ship.
+`@quxkit/billing-kit` is a **peer dependency**, not bundled: the number the
+server hands back is whatever version of billing-kit you installed next to it,
+so it tracks the library instead of freezing a copy of it. The bundle inlines
+everything else (the MCP SDK, zod, the discovery snapshots), so there is
+nothing else to ship.
+
+From a checkout:
+
+```sh
+pnpm install
+pnpm build           # esbuild -> dist/index.js, with @quxkit/billing-kit external
+```
 
 ## Use it from an MCP host
 
@@ -82,12 +94,14 @@ Add it to your host's server config. For **Claude Desktop**
 {
   "mcpServers": {
     "billing-kit": {
-      "command": "node",
-      "args": ["/absolute/path/to/billing-kit-mcp/dist/index.js"]
+      "command": "billing-kit-mcp"
     }
   }
 }
 ```
+
+(From a checkout, use `"command": "node", "args": ["/absolute/path/to/billing-kit-mcp/dist/index.js"]`
+instead.)
 
 Then ask, in plain language:
 
@@ -96,6 +110,15 @@ Then ask, in plain language:
 
 > *"Do these ledger legs balance: customer_balance +19.99, revenue_accrued −19.99?"*
 > → `check_ledger_balance` → **BALANCED ✓**
+
+## Errors
+
+A tool that cannot do what was asked (an unparseable quantity, a bad currency,
+an unknown component name) returns an MCP **tool error** — `isError: true` with
+a one-line explanation in `content` — rather than a successful result whose text
+happens to describe a problem. A host can therefore branch on the flag. An
+*unbalanced* posting is not an error: `check_ledger_balance` answers
+`NOT BALANCED` as a normal result, because that is the answer.
 
 ## How it talks
 
@@ -106,13 +129,16 @@ protocol frame corrupts the stream.
 ## Tests
 
 ```sh
-npm test
+pnpm test           # builds first, then drives the server in-memory and over stdio
 ```
 
 The suite drives the server through a real MCP `Client` over an in-memory
 transport — the same code path a host uses — asserting that `price_usage`
 returns billing-kit's exact value, `format_money` is currency-correct, and the
-ledger check accepts a balanced posting and rejects an unbalanced one.
+ledger check accepts a balanced posting and rejects an unbalanced one. A second
+file spawns the built `dist/index.js` over real stdio, so the external
+`@quxkit/billing-kit` import is proven to resolve the way it will after
+`npm i -g`.
 
 
 ## The QuxKit family

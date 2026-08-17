@@ -1,5 +1,219 @@
 {
   "note": "Curated reference to billing-kit's public API. Signatures are hand-authored and kept short; the point is discovery, not full type dumps.",
+  "generatedFrom": {
+    "package": "@quxkit/billing-kit",
+    "version": "0.1.0",
+    "source": "dist/**/index.d.ts via scripts/gen-discovery.mjs; `exports` is generated, `symbols` is curated by hand"
+  },
+  "exports": {
+    "@quxkit/billing-kit": {
+      "values": [
+        "BillingError",
+        "DECIMAL_SCALE",
+        "Money",
+        "Quantity",
+        "Rate",
+        "accrualPosting",
+        "aggregateUsage",
+        "allocate",
+        "assertBalanced",
+        "balance",
+        "createBilling",
+        "creditNotePosting",
+        "currencyExponent",
+        "entries",
+        "isKnownCurrency",
+        "knownCurrencies",
+        "paymentPosting",
+        "post",
+        "price",
+        "priceTiered",
+        "queryUsage",
+        "record",
+        "recordMany",
+        "refundPosting",
+        "scaleFraction",
+        "settlementPosting",
+        "validateEvent",
+        "walletBalance",
+        "walletRedeemPosting",
+        "walletTopupPosting"
+      ],
+      "types": [
+        "AccountKind",
+        "AggregateUsageQuery",
+        "AggregationMethod",
+        "BalanceQuery",
+        "Billing",
+        "BillingErrorCode",
+        "BillingFailure",
+        "BillingOptions",
+        "BillingProvider",
+        "CancelAt",
+        "Clock",
+        "CustomerRef",
+        "EntriesQuery",
+        "LedgerEntry",
+        "LedgerLeg",
+        "LedgerPosting",
+        "LedgerSourceKind",
+        "Logger",
+        "MoneyJSON",
+        "PostedTransaction",
+        "PricedAmount",
+        "ProviderCapabilities",
+        "ProviderCustomer",
+        "ProviderItem",
+        "ProviderSubscription",
+        "RawRequest",
+        "RecordedEvent",
+        "RefundAcknowledgement",
+        "RefundInput",
+        "SettlementLine",
+        "SettlementMode",
+        "SettlementRequest",
+        "SettlementResult",
+        "SettlementStatus",
+        "SqlExecutor",
+        "StoredUsageEvent",
+        "SubjectId",
+        "SubscriptionInput",
+        "SubscriptionStatus",
+        "TenantId",
+        "Tier",
+        "TierMode",
+        "UsageAggregate",
+        "UsageAggregation",
+        "UsageEvent",
+        "UsageQuery",
+        "UsageWindow",
+        "VerifiedEvent"
+      ]
+    },
+    "@quxkit/billing-kit/providers": {
+      "values": [
+        "ProviderError",
+        "STRIPE_CAPABILITIES",
+        "assertSettlementMode",
+        "canCreateSubscriptions",
+        "canFindCustomer",
+        "createPaddleProvider",
+        "createStripeProvider",
+        "isProviderError",
+        "ourAmountIsAuthoritative",
+        "providerIdFromOurRecords",
+        "settlementModeFor",
+        "settlementPostsCash",
+        "supportsSettlement",
+        "taxIsOurs"
+      ],
+      "types": [
+        "BillingProvider",
+        "CancelAt",
+        "CustomerRef",
+        "FetchLike",
+        "HttpRequestInit",
+        "HttpResponseLike",
+        "PaddleCapabilities",
+        "PaddleConfig",
+        "ProviderCapabilities",
+        "ProviderCustomer",
+        "ProviderCustomerId",
+        "ProviderErrorKind",
+        "ProviderId",
+        "ProviderIdempotency",
+        "ProviderItem",
+        "ProviderItemId",
+        "ProviderRefundId",
+        "ProviderSettlementId",
+        "ProviderSubscription",
+        "ProviderSubscriptionId",
+        "RawRequest",
+        "RefundAcknowledgement",
+        "RefundInput",
+        "SettlementLine",
+        "SettlementLookup",
+        "SettlementMode",
+        "SettlementModeOf",
+        "SettlementQuantity",
+        "SettlementRequest",
+        "SettlementResult",
+        "SettlementStatus",
+        "StripeCapabilities",
+        "StripeConfig",
+        "SubscriptionInput",
+        "SubscriptionStatus",
+        "VerifiedEvent"
+      ]
+    },
+    "@quxkit/billing-kit/metering": {
+      "values": [
+        "createMetering",
+        "drain",
+        "ensurePartitions",
+        "health",
+        "meterBatch",
+        "partitionReport"
+      ],
+      "types": [
+        "AmountByCurrency",
+        "BatchOptions",
+        "BatchResult",
+        "BoundDrainOptions",
+        "DrainOptions",
+        "DrainReport",
+        "DrainStatus",
+        "HealthFault",
+        "Metering",
+        "MeteringHealth",
+        "MeteringOptions",
+        "PartitionRow"
+      ]
+    },
+    "@quxkit/billing-kit/subscriptions": {
+      "values": [
+        "addInterval",
+        "applyDiscount",
+        "cancelSubscription",
+        "chargeDueSubscriptions",
+        "chargeForPeriod",
+        "chargeSubscriptionPeriod",
+        "createSubscription",
+        "createSubscriptions",
+        "daysInPeriod",
+        "definePlan",
+        "discountForPeriod",
+        "dueSubscriptions",
+        "getSubscription"
+      ],
+      "types": [
+        "BillingInterval",
+        "CancelWhen",
+        "ChargeLine",
+        "ChargePeriodInput",
+        "ChargePeriodResult",
+        "Coupon",
+        "CouponDuration",
+        "CreateSubscriptionInput",
+        "DiscountRule",
+        "DueQuery",
+        "PeriodCharge",
+        "PeriodChargeInput",
+        "Plan",
+        "PlanSeats",
+        "PlanUsage",
+        "Subscription",
+        "SubscriptionRef",
+        "SubscriptionState",
+        "Subscriptions",
+        "SubscriptionsOptions",
+        "SweepItem",
+        "SweepOptions",
+        "SweepReport",
+        "UsagePrice"
+      ]
+    }
+  },
   "symbols": [
     {
       "name": "Money",
@@ -35,7 +249,10 @@
       "kind": "class",
       "module": "@quxkit/billing-kit",
       "summary": "A price per unit, in MINOR units (cents), as an exact decimal. A rate of 0.00012 means 0.00012 cents per unit.",
-      "members": ["Rate.fromDecimalString(value: string): Rate", "rate.toDecimalString(): string"],
+      "members": [
+        "Rate.fromDecimalString(value: string): Rate",
+        "rate.toDecimalString(): string"
+      ],
       "gotcha": "The rate is in minor units, not major. Both price() and the SQL metering read it that way; a rate in dollars would price 100x high in one layer."
     },
     {
@@ -43,42 +260,59 @@
       "kind": "function",
       "module": "@quxkit/billing-kit",
       "summary": "Multiply a Quantity by a Rate to a Money, rounding once (half-even) and keeping the exact pre-rounding value.",
-      "members": ["price(quantity: Quantity, rate: Rate, currency: string): { amount: Money; exactMinor: string; residueMinor: string }"]
+      "members": [
+        "price(quantity: Quantity, rate: Rate, currency: string): { amount: Money; exactMinor: string; residueMinor: string }"
+      ]
     },
     {
       "name": "record",
       "kind": "function",
       "module": "@quxkit/billing-kit",
       "summary": "Record one usage event, idempotently. The dedupe key is (tenant, source, subject, metric, externalId), so the same request id can carry several metrics without one shadowing another.",
-      "members": ["record(db: SqlExecutor, event: UsageEvent, now: Date): Promise<RecordedEvent>"]
+      "members": [
+        "record(db: SqlExecutor, event: UsageEvent, now: Date): Promise<RecordedEvent>"
+      ]
     },
     {
       "name": "post",
       "kind": "function",
       "module": "@quxkit/billing-kit",
       "summary": "Post a balanced transaction to the append-only, double-entry ledger. Legs must sum to zero per currency; idempotent by (tenant, sourceKind, sourceId).",
-      "members": ["post(db: SqlExecutor, posting: LedgerPosting, now: Date): Promise<PostResult>", "accrualPosting({...}), paymentPosting({...})"]
+      "members": [
+        "post(db: SqlExecutor, posting: LedgerPosting, now: Date): Promise<PostResult>",
+        "accrualPosting({...}), paymentPosting({...})"
+      ]
     },
     {
       "name": "balance",
       "kind": "function",
       "module": "@quxkit/billing-kit",
       "summary": "The current balance of one account for a subject, as a Money — a SUM in SQL, so it is re-derivable and cannot disagree with the entries.",
-      "members": ["balance(db, { tenantId, subjectId, account, currency }): Promise<Money>", "entries(db, query): Promise<LedgerEntry[]>"]
+      "members": [
+        "balance(db, { tenantId, subjectId, account, currency }): Promise<Money>",
+        "entries(db, query): Promise<LedgerEntry[]>"
+      ]
     },
     {
       "name": "providers",
       "kind": "module",
       "module": "@quxkit/billing-kit/providers",
       "summary": "The provider interface plus Stripe and Paddle implementations. Every branch reads `capabilities`, never provider.name, so a fourth provider is an adapter, not a rewrite.",
-      "members": ["BillingProvider (interface)", "StripeProvider", "PaddleProvider", "verifyWebhook(...)"]
+      "members": [
+        "BillingProvider (interface)",
+        "StripeProvider",
+        "PaddleProvider",
+        "verifyWebhook(...)"
+      ]
     },
     {
       "name": "metering",
       "kind": "module",
       "module": "@quxkit/billing-kit/metering",
       "summary": "The set-based metering driver: one CTE pass with FOR UPDATE SKIP LOCKED, batched and idempotent, so concurrent workers cannot double-bill and a run is a bounded transaction.",
-      "members": ["meterBatch(db, options): Promise<RunMetrics>"]
+      "members": [
+        "meterBatch(db, options): Promise<RunMetrics>"
+      ]
     }
   ]
 }

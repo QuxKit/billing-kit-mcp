@@ -12,9 +12,9 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { registerPriceTools } from './tools/price.js';
-import { registerLedgerTools } from './tools/ledger.js';
 import { registerDiscoveryTools } from './tools/discover.js';
+import { registerLedgerTools } from './tools/ledger.js';
+import { registerPriceTools } from './tools/price.js';
 
 export function createServer(): McpServer {
   const server = new McpServer(
@@ -22,7 +22,7 @@ export function createServer(): McpServer {
     {
       instructions:
         'Tools backed by billing-kit. Use price_usage and format_money for any monetary value — ' +
-        'they compute with billing-kit\'s exact Money type, so the number is correct rather than ' +
+        "they compute with billing-kit's exact Money type, so the number is correct rather than " +
         'invented. Never format an amount by dividing minor units by 100; it is wrong for a third ' +
         'of ISO 4217. check_ledger_balance verifies a double-entry posting sums to zero. ' +
         'search_api and list_components/get_component discover the library and its UI.',
