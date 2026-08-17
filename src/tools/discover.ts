@@ -31,6 +31,9 @@ interface Component {
 }
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
+// A tool failure is signalled with isError per the MCP spec, so a host can tell
+// a priced amount from an error message instead of parsing prose.
+const failure = (s: string) => ({ isError: true as const, content: [{ type: 'text' as const, text: s }] });
 
 export function registerDiscoveryTools(server: McpServer): void {
   const api = apiData as { symbols: ApiSymbol[]; exports: Record<string, { values: string[]; types: string[] }> };
@@ -124,7 +127,7 @@ export function registerDiscoveryTools(server: McpServer): void {
           .map((i) => i.name)
           .filter((n) => n.includes(name) || name.includes(n))
           .slice(0, 5);
-        return text(`No component named "${name}".${near.length ? ` Did you mean: ${near.join(', ')}?` : ''}`);
+        return failure(`No component named "${name}".${near.length ? ` Did you mean: ${near.join(', ')}?` : ''}`);
       }
       return text(
         [

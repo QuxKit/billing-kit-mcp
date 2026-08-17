@@ -111,6 +111,15 @@ Then ask, in plain language:
 > *"Do these ledger legs balance: customer_balance +19.99, revenue_accrued −19.99?"*
 > → `check_ledger_balance` → **BALANCED ✓**
 
+## Errors
+
+A tool that cannot do what was asked (an unparseable quantity, a bad currency,
+an unknown component name) returns an MCP **tool error** — `isError: true` with
+a one-line explanation in `content` — rather than a successful result whose text
+happens to describe a problem. A host can therefore branch on the flag. An
+*unbalanced* posting is not an error: `check_ledger_balance` answers
+`NOT BALANCED` as a normal result, because that is the answer.
+
 ## How it talks
 
 stdio, newline-delimited JSON-RPC — the host spawns the server and speaks over

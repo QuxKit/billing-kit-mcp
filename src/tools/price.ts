@@ -7,6 +7,9 @@ import { Money, price, Quantity, Rate } from '@quxkit/billing-kit';
 import { z } from 'zod';
 
 const text = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
+// A tool failure is signalled with isError per the MCP spec, so a host can tell
+// a priced amount from an error message instead of parsing prose.
+const failure = (s: string) => ({ isError: true as const, content: [{ type: 'text' as const, text: s }] });
 
 export function registerPriceTools(server: McpServer): void {
   server.registerTool(
@@ -40,7 +43,7 @@ export function registerPriceTools(server: McpServer): void {
           ].join('\n'),
         );
       } catch (err) {
-        return text(`Could not price this: ${(err as Error).message}`);
+        return failure(`Could not price this: ${(err as Error).message}`);
       }
     },
   );
@@ -70,7 +73,7 @@ export function registerPriceTools(server: McpServer): void {
         }).format(money.toDecimalString());
         return text(`${minorUnits} minor ${currency.toUpperCase()} → ${fmt}`);
       } catch (err) {
-        return text(`Could not format this: ${(err as Error).message}`);
+        return failure(`Could not format this: ${(err as Error).message}`);
       }
     },
   );

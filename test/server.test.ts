@@ -113,3 +113,48 @@ test('search_api falls back to the generated export list for uncurated names', a
   const none = textOf(await client.callTool({ name: 'search_api', arguments: { query: 'zzz-not-a-thing' } }));
   assert.match(none, /No billing-kit symbol matched/);
 });
+
+test('tool failures carry isError: true, successes do not', async () => {
+  const client = await connect();
+  const bad = await client.callTool({
+    name: 'price_usage',
+    arguments: { quantity: 'not-a-number', rate: '0.1', currency: 'USD' },
+  });
+  assert.equal(bad.isError, true);
+  assert.match(textOf(bad), /Could not price this/);
+
+  const badMoney = await client.callTool({ name: 'format_money', arguments: { minorUnits: '19.99', currency: 'USD' } });
+  assert.equal(badMoney.isError, true);
+
+  const badLegs = await client.callTool({
+    name: 'check_ledger_balance',
+    arguments: {
+      legs: [
+        { account: 'a', minorUnits: 'x', currency: 'USD' },
+        { account: 'b', minorUnits: '-1', currency: 'USD' },
+      ],
+    },
+  });
+  assert.equal(badLegs.isError, true);
+
+  const missing = await client.callTool({ name: 'get_component', arguments: { name: 'no-such-component' } });
+  assert.equal(missing.isError, true);
+  assert.match(textOf(missing), /No component named/);
+
+  const ok = await client.callTool({
+    name: 'price_usage',
+    arguments: { quantity: '1', rate: '100', currency: 'USD' },
+  });
+  assert.notEqual(ok.isError, true);
+  // An unbalanced posting is a valid answer ("not balanced"), not a tool failure.
+  const unbalanced = await client.callTool({
+    name: 'check_ledger_balance',
+    arguments: {
+      legs: [
+        { account: 'a', minorUnits: '2', currency: 'USD' },
+        { account: 'b', minorUnits: '-1', currency: 'USD' },
+      ],
+    },
+  });
+  assert.notEqual(unbalanced.isError, true);
+});
