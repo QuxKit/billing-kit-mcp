@@ -53,6 +53,27 @@ flowchart LR
     class ch a
 ```
 
+## Write tools: the four guards
+
+```mermaid
+flowchart TB
+    c["record_usage / apply_coupon call"] --> f{"--allow-writes?"}
+    f -- no --> r1["isError: writes are disabled"]
+    f -- yes --> k{"confirm: true?"}
+    k -- no --> r2["isError: needs confirm"]
+    k -- yes --> t{"in tenant scope?"}
+    t -- no --> r3["isError: outside scope"]
+    t -- yes --> bk["billing-kit record / post<br/>idempotent on the key"]
+    bk --> o1["recorded / posted"]
+    bk --> o2["deduplicated: true (same payload)"]
+    bk --> o3["idempotency_conflict (different payload)"]
+    r1 & r2 & r3 & o1 & o2 & o3 -.-> a["audit line → stderr"]
+    classDef bad fill:#9e2b2b,stroke:#7f2222,color:#fff
+    classDef a fill:#0d9488,stroke:#0f766e,color:#fff
+    class r1,r2,r3,o3 bad
+    class bk a
+```
+
 ## Why the tool exists: an assistant guessing vs. the Money type
 
 ```mermaid

@@ -26,7 +26,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import {
   BillingError,
-  balance,
   type Clock,
   creditNotePosting,
   Money,
@@ -132,8 +131,10 @@ export function registerWriteTools(server: McpServer, options: WriteToolOptions)
         occurredAt: z
           .string()
           .datetime({ offset: true })
-          .optional()
-          .describe('When it happened (ISO-8601). Defaults to now; must not be in the future.'),
+          .describe(
+            'When it happened (ISO-8601 with offset). Required, not defaulted: it is part of the event and of ' +
+              'the idempotency check — a retry must send the same instant. Must not be in the future.',
+          ),
         metadata: z.record(z.unknown()).optional(),
         idempotencyKey,
         confirm,
@@ -153,7 +154,7 @@ export function registerWriteTools(server: McpServer, options: WriteToolOptions)
             externalId: a.idempotencyKey,
             metric: a.metric,
             quantity: Quantity.fromDecimalString(a.quantity),
-            occurredAt: a.occurredAt ? new Date(a.occurredAt) : at,
+            occurredAt: new Date(a.occurredAt),
             metadata: a.metadata,
           },
           at,
@@ -192,10 +193,10 @@ export function registerWriteTools(server: McpServer, options: WriteToolOptions)
       description:
         'Reduce what a subject owes by a discount, posted as a credit note in the ledger (customer_balance ' +
         "down, revenue_accrued reversed) — billing-kit's append-only way to say a charge was too much. The " +
-        'discount is applyDiscount(base, rule): a percent in basis points (2000 = 20%) or a fixed amount, ' +
-        'clamped to the base; base is `chargeAmount` if given, else the current customer_balance. Requires ' +
-        '--allow-writes, confirm: true, and an idempotencyKey (the credit note id): the same key twice ' +
-        'posts once.',
+        'discount is applyDiscount(chargeAmount, rule): a percent in basis points (2000 = 20%) or a fixed ' +
+        'amount, clamped to chargeAmount. chargeAmount is explicit (look it up with ledger_balance or the ' +
+        'period charge) so a retry reproduces the same posting. Requires --allow-writes, confirm: true, and ' +
+        'an idempotencyKey (the credit note id): the same key twice posts once.',
       inputSchema: {
         tenantId,
         subjectId,
@@ -209,8 +210,7 @@ export function registerWriteTools(server: McpServer, options: WriteToolOptions)
         chargeAmount: z
           .string()
           .regex(/^\d+(\.\d+)?$/, 'a decimal string')
-          .optional()
-          .describe('The amount the coupon applies to. Omit to apply it to what the subject currently owes.'),
+          .describe('The amount the coupon applies to (decimal string in `currency`), e.g. the period charge.'),
         memo: z.string().max(200).optional(),
         idempotencyKey,
         confirm,
@@ -221,20 +221,13 @@ export function registerWriteTools(server: McpServer, options: WriteToolOptions)
       if (gate.refused) return gate.refused;
       const cur = a.currency.toUpperCase();
       try {
-        const base =
-          a.chargeAmount !== undefined
-            ? Money.fromDecimalString(a.chargeAmount, cur)
-            : await balance(gate.db, {
-                tenantId: a.tenantId,
-                subjectId: a.subjectId,
-                account: 'customer_balance',
-                currency: cur,
-              });
+        const base = Money.fromDecimalString(a.chargeAmount, cur);
+
         const rule: DiscountRule =
           a.coupon.kind === 'percent'
             ? { kind: 'percent', bps: a.coupon.bps }
             : { kind: 'amount', off: Money.fromDecimalString(a.coupon.off, cur) };
-        const discount = base.isNegative() ? Money.zero(cur) : applyDiscount(base, rule);
+        const discount = applyDiscount(base, rule);
         if (discount.isZero()) {
           log('apply_coupon', {
             tenant: a.tenantId,
@@ -244,7 +237,7 @@ export function registerWriteTools(server: McpServer, options: WriteToolOptions)
           });
           return json({
             applied: false,
-            reason: base.isNegative() ? 'the subject owes nothing (balance is a credit)' : 'the discount comes to zero',
+            reason: 'the discount comes to zero',
             base: base.toDecimalString(),
             currency: cur,
           });

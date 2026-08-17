@@ -24,6 +24,13 @@ All notable changes to this project are documented here. The format follows
   subscription's current-period charge (subscription, plan, per-metric usage,
   `chargeForPeriod` lines, ledger postings and balance) when a database is
   connected and hands back the procedure otherwise.
+- **Write tools behind a flag.** `--allow-writes` / `BILLING_KIT_MCP_ALLOW_WRITES=1`
+  enables `record_usage` (billing-kit `record`) and `apply_coupon` (a credit
+  note via `applyDiscount` + `creditNotePosting`), each requiring
+  `confirm: true` and an `idempotencyKey`; listed but refused with `isError`
+  when the flag is off; every attempt writes an audit line to stderr. The bin
+  opens a separate writable pool only when the flag is on. `configFromEnv`
+  now also reads argv.
 - Discovery snapshots regenerated against billing-kit `main` (adds the
   `@quxkit/billing-kit/pg` subpath, `ENTRIES_MAX_ROWS`, `RECORD_MANY_MAX`,
   the sweep types) and billing-kit-components' current registry.

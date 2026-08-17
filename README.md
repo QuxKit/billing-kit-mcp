@@ -11,8 +11,10 @@ billing-kit's real capabilities: **exact money math**, a **double-entry balance
 check**, **discovery** of the API and the UI components, and — with a
 `DATABASE_URL` — **read-only answers from a real billing database** (usage,
 aggregates, ledger balances and entries, wallets, subscription state). It also
-serves the **plan catalogue** and the **SQL schema** as resources, and an
-**`explain-charge`** prompt that walks a subscription's period charge.
+serves the **plan catalogue** and the **SQL schema** as resources, an
+**`explain-charge`** prompt that walks a subscription's period charge, and —
+only behind `--allow-writes` — two **write tools** (`record_usage`,
+`apply_coupon`) that need `confirm: true` and an idempotency key.
 
 The point is the first one. Ask a model to price 1,234,567 tokens at $0.0000012
 and it will happily invent a number with `qty * rate / 100` — which is wrong for
@@ -265,6 +267,52 @@ unit — billing-kit's own conventions, no floats. Every entry is hydrated throu
 billing-kit's `definePlan`, so an invalid catalogue is refused at startup with
 billing-kit's reason (`invalid_plan`, `unknown_currency`, …) rather than
 mis-pricing later. `name` and `description` are free-form and served as-is.
+
+## Write tools (off by default)
+
+```sh
+billing-kit-mcp --allow-writes            # or BILLING_KIT_MCP_ALLOW_WRITES=1
+```
+
+| Tool | What it writes |
+|---|---|
+| `record_usage` | One usage event through billing-kit's idempotent `record`: `tenantId`, `subjectId`, `source`, `metric`, `quantity`, `occurredAt`, `idempotencyKey` (stored as the event's `externalId`, namespaced by `source`), `confirm`. |
+| `apply_coupon` | A credit note for a discount — `applyDiscount(chargeAmount, coupon)` posted with `creditNotePosting`: `customer_balance` down, `revenue_accrued` reversed. `coupon` is `{ kind: "percent", bps }` (2000 = 20%) or `{ kind: "amount", off }`, clamped to `chargeAmount`; `idempotencyKey` is the credit note id. |
+
+Both are listed whenever a database is configured, so an assistant can say what
+it *would* do — but four guards stand between a call and a row, in this order:
+
+```
+ call ─▶ flag on?  ──no──▶ isError "writes are disabled…"        (audit: refused)
+           │yes
+           ▼
+         confirm: true? ──no──▶ isError "needs confirm: true"      (audit: refused)
+           │yes
+           ▼
+         in tenant scope? ──no──▶ isError "outside scope"          (audit: refused)
+           │yes
+           ▼
+         billing-kit record / post, idempotent on the key
+           ├─ first time      → recorded / posted                  (audit: recorded)
+           ├─ same key, same payload → deduplicated: true, no-op   (audit: deduplicated)
+           └─ same key, different payload → idempotency_conflict   (audit: failed)
+```
+
+- **The flag** is the operator's, not the assistant's: nothing an argument
+  carries turns writes on. When on, the bin opens a *second*, writable pool
+  for these two tools; the read tools keep their read-only connection.
+- **`confirm: true`** is a required argument, not a default — the call itself
+  states that the user asked for the write.
+- **The idempotency key** makes a retry boring: billing-kit's ingest and ledger
+  are idempotent on the caller's key, so the same call twice records or posts
+  once and reports `deduplicated: true`. The same key with a *different*
+  payload is refused with billing-kit's `idempotency_conflict`. That is why
+  `occurredAt` (on `record_usage`) and `chargeAmount` (on `apply_coupon`) are
+  required rather than defaulted from the clock or the live balance — a retry
+  has to reproduce the same write.
+- **Every attempt writes one audit line to stderr** (`billing-kit-mcp: audit
+  record_usage tenant="acme" … outcome="refused" reason="writes_disabled"`),
+  refused or not, so an operator can see what an assistant tried.
 
 ### Read-only role
 
