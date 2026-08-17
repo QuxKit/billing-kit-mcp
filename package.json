@@ -29,5 +29,13 @@
   },
   "publishConfig": {
     "access": "restricted"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/QuxKit/billing-kit-mcp.git"
+  },
+  "homepage": "https://github.com/QuxKit/billing-kit-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/QuxKit/billing-kit-mcp/issues"
   }
 }
