@@ -29,6 +29,7 @@
         "paymentPosting",
         "post",
         "price",
+        "pricePackage",
         "priceTiered",
         "queryUsage",
         "record",
@@ -61,6 +62,7 @@
         "LedgerSourceKind",
         "Logger",
         "MoneyJSON",
+        "PackagePrice",
         "PostedTransaction",
         "PricedAmount",
         "ProviderCapabilities",
@@ -95,6 +97,7 @@
       "values": [
         "ProviderError",
         "STRIPE_CAPABILITIES",
+        "applyVerifiedEvent",
         "assertSettlementMode",
         "canCreateSubscriptions",
         "canFindCustomer",
@@ -109,6 +112,9 @@
         "taxIsOurs"
       ],
       "types": [
+        "AppliedEvent",
+        "ApplySkipReason",
+        "ApplyVerifiedEventInput",
         "BillingProvider",
         "CancelAt",
         "CustomerRef",
@@ -132,6 +138,7 @@
         "RawRequest",
         "RefundAcknowledgement",
         "RefundInput",
+        "ResolvedSubject",
         "SettlementLine",
         "SettlementLookup",
         "SettlementMode",
@@ -142,6 +149,7 @@
         "SettlementStatus",
         "StripeCapabilities",
         "StripeConfig",
+        "SubjectResolver",
         "SubscriptionInput",
         "SubscriptionStatus",
         "VerifiedEvent"
@@ -176,8 +184,10 @@
         "addInterval",
         "applyDiscount",
         "cancelSubscription",
+        "changePlan",
         "chargeDueSubscriptions",
         "chargeForPeriod",
+        "chargeLinesJSON",
         "chargeSubscriptionPeriod",
         "createSubscription",
         "createSubscriptions",
@@ -185,11 +195,15 @@
         "definePlan",
         "discountForPeriod",
         "dueSubscriptions",
-        "getSubscription"
+        "getSubscription",
+        "prorationFor"
       ],
       "types": [
         "BillingInterval",
         "CancelWhen",
+        "ChangeBehaviour",
+        "ChangePlanInput",
+        "ChangePlanResult",
         "ChargeLine",
         "ChargePeriodInput",
         "ChargePeriodResult",
@@ -201,6 +215,7 @@
         "PeriodCharge",
         "PeriodChargeInput",
         "Plan",
+        "PlanFeature",
         "PlanSeats",
         "PlanUsage",
         "Subscription",
@@ -214,6 +229,65 @@
         "SweepReport",
         "SweepRetry",
         "UsagePrice"
+      ]
+    },
+    "@quxkit/billing-kit/entitlements": {
+      "values": [
+        "activeSubscription",
+        "check",
+        "createEntitlements",
+        "entitlements",
+        "list",
+        "periodContaining"
+      ],
+      "types": [
+        "Entitlement",
+        "EntitlementDenial",
+        "EntitlementListQuery",
+        "EntitlementQuery",
+        "Entitlements",
+        "EntitlementsOptions",
+        "Plan",
+        "PlanFeature",
+        "PlanResolver"
+      ]
+    },
+    "@quxkit/billing-kit/invoices": {
+      "values": [
+        "addLine",
+        "attachSettlement",
+        "createInvoice",
+        "createInvoices",
+        "finalize",
+        "getInvoice",
+        "invoiceBySettlement",
+        "invoiceForPeriod",
+        "invoiceToHTML",
+        "invoiceToJSON",
+        "linesFromCharge",
+        "listInvoices",
+        "markPaid",
+        "markUncollectible",
+        "nextInvoiceNumber",
+        "renderInvoice",
+        "voidInvoice"
+      ],
+      "types": [
+        "CreateInvoiceInput",
+        "FinalizeInput",
+        "Invoice",
+        "InvoiceForPeriodInput",
+        "InvoiceJSON",
+        "InvoiceLine",
+        "InvoiceLineKind",
+        "InvoiceRef",
+        "InvoiceState",
+        "Invoices",
+        "InvoicesOptions",
+        "ListInvoicesQuery",
+        "NewInvoiceLine",
+        "RenderOptions",
+        "StoredChargeLine"
       ]
     },
     "@quxkit/billing-kit/pg": {

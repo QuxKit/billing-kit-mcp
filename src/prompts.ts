@@ -14,10 +14,33 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { aggregateUsage, balance, entries, type Quantity, type SqlExecutor } from '@quxkit/billing-kit';
-import { chargeForPeriod, getSubscription, type Subscription } from '@quxkit/billing-kit/subscriptions';
+import {
+  chargeForPeriod,
+  getSubscription,
+  type Subscription,
+  type UsagePrice,
+} from '@quxkit/billing-kit/subscriptions';
 import { z } from 'zod';
 import type { PlanCatalogue } from './catalogue.js';
 import { plainDecimal } from './tools/db.js';
+
+/** One phrase per pricing shape. Kept exhaustive on `kind` so a new pricing
+ *  primitive in billing-kit fails the typecheck here instead of printing
+ *  `undefined tiers` at an assistant. */
+function describePrice(price: UsagePrice): string {
+  switch (price.kind) {
+    case 'flat':
+      return `flat ${price.rate.toDecimalString()} minor/unit`;
+    case 'tiered':
+      return `${price.mode} tiers`;
+    case 'package':
+      return `packages of ${plainDecimal(price.package.unitsPerPackage.toDecimalString())} at ${price.package.pricePerPackage.toDecimalString()}`;
+    default: {
+      const never: never = price;
+      return String(never);
+    }
+  }
+}
 
 export interface PromptOptions {
   db?: SqlExecutor;
@@ -128,7 +151,7 @@ async function walkCharge(
       out.push(
         `usage ${u.metric}: ${plainDecimal(agg.quantity.toDecimalString())} over ${agg.eventCount} events` +
           `${u.included ? `, included ${plainDecimal(u.included.toDecimalString())}` : ''}` +
-          `, price ${u.price.kind === 'flat' ? `flat ${u.price.rate.toDecimalString()} minor/unit` : `${u.price.mode} tiers`}`,
+          `, price ${describePrice(u.price)}`,
       );
     }
     const charge = chargeForPeriod(plan, { seats: sub.seats, usage, trial });
