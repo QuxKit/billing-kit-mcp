@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Discovery snapshots regenerated: billing-kit now exports `./invoices` and
+  `./entitlements` and ships `sql/031`, `032` and `090`; the components registry
+  gained `admin-console` and `tailwind-preset-v4`.
+- `explain-charge` described metered pricing by reading `.mode` off the price,
+  which billing-kit's new package pricing does not carry — it printed
+  `undefined tiers`, and the repo did not typecheck. Pricing is now described by
+  an exhaustive switch on `kind`, so the next pricing primitive fails the build
+  here rather than reaching an assistant as nonsense.
+
 ### Added
 - **DB-backed read tools.** With `DATABASE_URL` set the server registers
   `query_usage`, `aggregate_usage`, `ledger_balance`, `ledger_entries`,

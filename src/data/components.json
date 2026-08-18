@@ -15,7 +15,7 @@
       ],
       "registryDependencies": [],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -30,7 +30,7 @@
         "@billing-kit/money"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -43,7 +43,7 @@
       ],
       "registryDependencies": [],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -56,7 +56,7 @@
       ],
       "registryDependencies": [],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -71,7 +71,7 @@
         "@billing-kit/money"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -98,7 +98,7 @@
         "@billing-kit/use-usage"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -113,7 +113,7 @@
         "@billing-kit/use-usage"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -126,7 +126,7 @@
       ],
       "registryDependencies": [],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -141,7 +141,7 @@
         "@billing-kit/money"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -161,7 +161,7 @@
         "@billing-kit/plan-card"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -179,7 +179,7 @@
         "@billing-kit/plans"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -196,7 +196,7 @@
         "@billing-kit/plans"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -213,7 +213,7 @@
         "@billing-kit/plans"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -231,7 +231,7 @@
         "@billing-kit/money"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -248,7 +248,7 @@
         "@billing-kit/plans"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -266,7 +266,7 @@
         "@billing-kit/use-balance"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -284,7 +284,7 @@
         "@billing-kit/format-config"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -301,7 +301,7 @@
         "@billing-kit/use-balance"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -320,7 +320,7 @@
         "@billing-kit/money"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -369,7 +369,7 @@
         "@billing-kit/money"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -389,7 +389,7 @@
         "@billing-kit/money"
       ],
       "dependencies": [
-        "billing-kit@^0.1.0"
+        "@quxkit/billing-kit@^0.1.0"
       ]
     },
     {
@@ -405,6 +405,40 @@
         "label",
         "switch"
       ],
+      "dependencies": [
+        "@quxkit/billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "admin-console",
+      "title": "Admin console",
+      "type": "registry:block",
+      "description": "The operator console: price-editor, promo-manager and entitlement-toggles under one set of tabs, over an injected AdminConsoleFetcher seam (httpAdminFetcher is the default over six conventional routes). Every mutation is followed by a re-list; nothing optimistically owns a price, code or grant.",
+      "categories": [
+        "superadmin"
+      ],
+      "registryDependencies": [
+        "tabs",
+        "button",
+        "label",
+        "@billing-kit/money",
+        "@billing-kit/price-editor",
+        "@billing-kit/promo-manager",
+        "@billing-kit/entitlement-toggles"
+      ],
+      "dependencies": [
+        "@quxkit/billing-kit@^0.1.0"
+      ]
+    },
+    {
+      "name": "tailwind-preset-v4",
+      "title": "Tailwind v4 preset",
+      "type": "registry:item",
+      "description": "The billing-domain Tailwind v4 theming, both doors: tokens.css (values + bindings + base layer — the default) and tailwind-preset.v4.css (bindings only, for an app that already owns its shadcn/ui theme). Import exactly one.",
+      "categories": [
+        "core"
+      ],
+      "registryDependencies": [],
       "dependencies": []
     }
   ]
