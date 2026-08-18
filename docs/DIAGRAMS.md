@@ -38,6 +38,55 @@ flowchart TB
     class e1,e2 bad
 ```
 
+## explain-charge: what the prompt walks
+
+```mermaid
+flowchart LR
+    p["explain-charge<br/>{ tenantId, subscription }"]
+    p --> s["getSubscription<br/>plan id · seats · period · trial"]
+    p --> c["billing://plans<br/>base · seats · included · overage"]
+    p --> u["aggregateUsage<br/>per metered metric, over the period"]
+    s & c & u --> ch["chargeForPeriod<br/>flat / seats / usage / discount → total"]
+    p --> l["entries + balance<br/>charge postings · owed now"]
+    ch & l --> m["one user message:<br/>the exact figures + 'explain each line'"]
+    classDef a fill:#0d9488,stroke:#0f766e,color:#fff
+    class ch a
+```
+
+## Write tools: the four guards
+
+```mermaid
+flowchart TB
+    c["record_usage / apply_coupon call"] --> f{"--allow-writes?"}
+    f -- no --> r1["isError: writes are disabled"]
+    f -- yes --> k{"confirm: true?"}
+    k -- no --> r2["isError: needs confirm"]
+    k -- yes --> t{"in tenant scope?"}
+    t -- no --> r3["isError: outside scope"]
+    t -- yes --> bk["billing-kit record / post<br/>idempotent on the key"]
+    bk --> o1["recorded / posted"]
+    bk --> o2["deduplicated: true (same payload)"]
+    bk --> o3["idempotency_conflict (different payload)"]
+    r1 & r2 & r3 & o1 & o2 & o3 -.-> a["audit line → stderr"]
+    classDef bad fill:#9e2b2b,stroke:#7f2222,color:#fff
+    classDef a fill:#0d9488,stroke:#0f766e,color:#fff
+    class r1,r2,r3,o3 bad
+    class bk a
+```
+
+## Two transports: stdio by default, HTTP behind a bearer token
+
+```mermaid
+flowchart LR
+    l["local host<br/>Claude Desktop · Claude Code"] -->|spawn + stdio| srv
+    r["remote host<br/>hosted assistant · team deployment"] -->|"POST /mcp<br/>Authorization: Bearer"| gate
+    gate{"token set?<br/>constant-time match?"} -- no --> x["401 + WWW-Authenticate<br/>(no token at all: refuses to listen)"]
+    gate -- yes --> srv["McpServer<br/>(one per request, stateless)"]
+    srv --> pools["shared pools:<br/>read-only + (with --allow-writes) writable"]
+    classDef bad fill:#9e2b2b,stroke:#7f2222,color:#fff
+    class x bad
+```
+
 ## Why the tool exists: an assistant guessing vs. the Money type
 
 ```mermaid

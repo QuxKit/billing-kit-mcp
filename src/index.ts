@@ -13,11 +13,16 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { SqlExecutor } from '@quxkit/billing-kit';
+import { loadPlanCatalogue, type PlanCatalogue } from './catalogue.js';
 import { openDatabase } from './db.js';
+import { startHttp } from './http.js';
+import { registerPrompts } from './prompts.js';
+import { registerResources } from './resources.js';
 import { registerDbTools } from './tools/db.js';
 import { registerDiscoveryTools } from './tools/discover.js';
 import { registerLedgerTools } from './tools/ledger.js';
 import { registerPriceTools } from './tools/price.js';
+import { registerWriteTools } from './tools/write.js';
 
 export interface ServerOptions {
   /**
@@ -29,6 +34,20 @@ export interface ServerOptions {
   db?: SqlExecutor;
   /** Refuse DB calls for any tenant but this one (BILLING_KIT_MCP_TENANT). */
   tenantScope?: string;
+  /** The operator's plans (BILLING_KIT_MCP_PLANS), served as billing://plans and used by explain-charge. */
+  catalogue?: PlanCatalogue;
+  /** Where billing-kit's SQL is read from for billing://schema; defaults to the installed package. */
+  sqlDir?: string;
+  /**
+   * A WRITABLE executor, present only when the operator passed --allow-writes.
+   * With it (and `allowWrites`), record_usage and apply_coupon do their write;
+   * without it they are listed but every call is refused with isError.
+   */
+  writeDb?: SqlExecutor;
+  /** The write flag (--allow-writes / BILLING_KIT_MCP_ALLOW_WRITES=1). */
+  allowWrites?: boolean;
+  /** Where write-tool audit lines go; defaults to stderr. */
+  audit?: (line: string) => void;
 }
 
 export function createServer(options: ServerOptions = {}): McpServer {
@@ -40,7 +59,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
         "they compute with billing-kit's exact Money type, so the number is correct rather than " +
         'invented. Never format an amount by dividing minor units by 100; it is wrong for a third ' +
         'of ISO 4217. check_ledger_balance verifies a double-entry posting sums to zero. ' +
-        'search_api and list_components/get_component discover the library and its UI.' +
+        'search_api and list_components/get_component discover the library and its UI. ' +
+        'Resources: billing://schema is the SQL schema' +
+        (options.catalogue ? ', billing://plans is the plan catalogue' : '') +
+        '. The explain-charge prompt walks a subscription period charge.' +
+        (options.db || options.writeDb
+          ? options.allowWrites && options.writeDb
+            ? ' Writes are ENABLED: record_usage and apply_coupon write through billing-kit, only with confirm: true ' +
+              'and an idempotencyKey; ask the user before calling either.'
+            : ' record_usage and apply_coupon are listed but writes are disabled on this server; they will refuse.'
+          : '') +
         (options.db
           ? ' The server is connected to a billing database (read-only): query_usage, aggregate_usage, ' +
             'ledger_balance, ledger_entries, subscription_status and wallet_balance read real rows; every ' +
@@ -53,6 +81,16 @@ export function createServer(options: ServerOptions = {}): McpServer {
   registerLedgerTools(server);
   registerDiscoveryTools(server);
   if (options.db) registerDbTools(server, { db: options.db, tenantScope: options.tenantScope });
+  if (options.db || options.writeDb) {
+    registerWriteTools(server, {
+      db: options.writeDb,
+      enabled: options.allowWrites === true,
+      tenantScope: options.tenantScope,
+      audit: options.audit,
+    });
+  }
+  registerResources(server, { catalogue: options.catalogue, sqlDir: options.sqlDir });
+  registerPrompts(server, { db: options.db, tenantScope: options.tenantScope, catalogue: options.catalogue });
   return server;
 }
 
@@ -60,29 +98,86 @@ export function createServer(options: ServerOptions = {}): McpServer {
 export interface RuntimeConfig {
   databaseUrl?: string;
   tenantScope?: string;
+  plansPath?: string;
+  /** --allow-writes or BILLING_KIT_MCP_ALLOW_WRITES=1 */
+  allowWrites: boolean;
+  /** `--http :port` — serve Streamable HTTP there instead of stdio. */
+  http?: string;
+  /** BILLING_KIT_MCP_TOKEN — the bearer token HTTP requests must present. */
+  token?: string;
 }
 
-export function configFromEnv(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
+const truthy = (v: string | undefined) =>
+  v !== undefined && ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase());
+
+export function configFromEnv(env: NodeJS.ProcessEnv = process.env, argv: readonly string[] = []): RuntimeConfig {
   const trimmed = (v: string | undefined) => (v && v.trim() !== '' ? v.trim() : undefined);
   return {
     databaseUrl: trimmed(env.DATABASE_URL),
     tenantScope: trimmed(env.BILLING_KIT_MCP_TENANT),
+    plansPath: trimmed(env.BILLING_KIT_MCP_PLANS),
+    allowWrites: argv.includes('--allow-writes') || truthy(env.BILLING_KIT_MCP_ALLOW_WRITES),
+    http: httpArg(argv),
+    token: trimmed(env.BILLING_KIT_MCP_TOKEN),
   };
 }
 
+/** `--http :3100`, `--http=:3100`, or a bare `--http` (defaults to :3100). */
+function httpArg(argv: readonly string[]): string | undefined {
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i] ?? '';
+    if (a.startsWith('--http=')) return a.slice('--http='.length) || ':3100';
+    if (a === '--http') {
+      const next = argv[i + 1];
+      return next && !next.startsWith('--') ? next : ':3100';
+    }
+  }
+  return undefined;
+}
+
 async function main(): Promise<void> {
-  const config = configFromEnv();
+  const config = configFromEnv(process.env, process.argv.slice(2));
   const opened = config.databaseUrl ? openDatabase(config.databaseUrl) : undefined;
-  const server = createServer({ db: opened?.db, tenantScope: config.tenantScope });
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  // stderr, never stdout — stdout is the protocol channel.
-  process.stderr.write(
-    `billing-kit-mcp: ready on stdio${opened ? ' (database connected, read-only' : ' (no database'}` +
-      `${config.tenantScope ? `, tenant ${config.tenantScope}` : ''})\n`,
-  );
+  // A second, writable pool — only with the flag. The read tools never see it.
+  const writable =
+    config.databaseUrl && config.allowWrites
+      ? openDatabase(config.databaseUrl, { readOnly: false, max: 2 })
+      : undefined;
+  const catalogue = config.plansPath ? await loadPlanCatalogue(config.plansPath) : undefined;
+  const serverOptions: ServerOptions = {
+    db: opened?.db,
+    tenantScope: config.tenantScope,
+    catalogue,
+    writeDb: writable?.db,
+    allowWrites: config.allowWrites,
+  };
+  const status =
+    `${opened ? '(database connected, read-only' : '(no database'}` +
+    `${config.tenantScope ? `, tenant ${config.tenantScope}` : ''}` +
+    `${catalogue ? `, ${catalogue.plans.size} plans` : ''}` +
+    `${writable ? ', WRITES ENABLED' : ''})`;
+
+  let closeHttp: (() => Promise<void>) | undefined;
+  if (config.http !== undefined) {
+    // One McpServer per request (stateless); the pools above are shared.
+    const http = await startHttp({
+      listen: config.http,
+      token: config.token,
+      serverFactory: () => createServer(serverOptions),
+    });
+    closeHttp = http.close;
+    process.stderr.write(`billing-kit-mcp: ready on ${http.url} ${status}\n`);
+  } else {
+    const server = createServer(serverOptions);
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    // stderr, never stdout — stdout is the protocol channel.
+    process.stderr.write(`billing-kit-mcp: ready on stdio ${status}\n`);
+  }
   const shutdown = async () => {
+    await closeHttp?.().catch(() => undefined);
     await opened?.close().catch(() => undefined);
+    await writable?.close().catch(() => undefined);
     process.exit(0);
   };
   process.on('SIGINT', shutdown);

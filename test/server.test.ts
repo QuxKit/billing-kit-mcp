@@ -161,13 +161,43 @@ test('tool failures carry isError: true, successes do not', async () => {
 
 test('configFromEnv reads DATABASE_URL and BILLING_KIT_MCP_TENANT, blank means unset', async () => {
   const { configFromEnv } = await import('../src/index.ts');
-  assert.deepEqual(configFromEnv({}), { databaseUrl: undefined, tenantScope: undefined });
+  assert.deepEqual(configFromEnv({}), {
+    databaseUrl: undefined,
+    tenantScope: undefined,
+    plansPath: undefined,
+    allowWrites: false,
+    http: undefined,
+    token: undefined,
+  });
   assert.deepEqual(configFromEnv({ DATABASE_URL: '  ', BILLING_KIT_MCP_TENANT: '' }), {
     databaseUrl: undefined,
     tenantScope: undefined,
+    plansPath: undefined,
+    allowWrites: false,
+    http: undefined,
+    token: undefined,
   });
   assert.deepEqual(configFromEnv({ DATABASE_URL: 'postgres://x/y', BILLING_KIT_MCP_TENANT: 'acme ' }), {
     databaseUrl: 'postgres://x/y',
     tenantScope: 'acme',
+    plansPath: undefined,
+    allowWrites: false,
+    http: undefined,
+    token: undefined,
   });
+});
+
+test('configFromEnv reads BILLING_KIT_MCP_PLANS', async () => {
+  const { configFromEnv } = await import('../src/index.ts');
+  assert.equal(configFromEnv({ BILLING_KIT_MCP_PLANS: './plans.json' }).plansPath, './plans.json');
+  assert.equal(configFromEnv({}).plansPath, undefined);
+});
+
+test('configFromEnv: --allow-writes or BILLING_KIT_MCP_ALLOW_WRITES turns writes on', async () => {
+  const { configFromEnv } = await import('../src/index.ts');
+  assert.equal(configFromEnv({}).allowWrites, false);
+  assert.equal(configFromEnv({}, ['--allow-writes']).allowWrites, true);
+  assert.equal(configFromEnv({ BILLING_KIT_MCP_ALLOW_WRITES: '1' }).allowWrites, true);
+  assert.equal(configFromEnv({ BILLING_KIT_MCP_ALLOW_WRITES: 'true' }).allowWrites, true);
+  assert.equal(configFromEnv({ BILLING_KIT_MCP_ALLOW_WRITES: '0' }).allowWrites, false);
 });

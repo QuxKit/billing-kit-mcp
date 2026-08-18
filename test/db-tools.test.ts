@@ -7,7 +7,9 @@
 // inserted with hand-written SQL".
 
 import assert from 'node:assert/strict';
+import { dirname, resolve } from 'node:path';
 import { after, before, describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import {
@@ -21,6 +23,7 @@ import {
   walletTopupPosting,
 } from '@quxkit/billing-kit';
 import { createSubscription, definePlan } from '@quxkit/billing-kit/subscriptions';
+import { loadPlanCatalogue } from '../src/catalogue.ts';
 import { createServer, type ServerOptions } from '../src/index.ts';
 import { MAX_ROWS } from '../src/tools/db.ts';
 import { type DbHarness, SKIP_REASON, setupDatabase } from './db-harness.ts';
@@ -137,9 +140,10 @@ describe('DB-backed read tools', { skip: harness === null ? SKIP_REASON : false 
         },
       ],
     });
+    // Started 300 minutes ago, so the seeded usage falls inside its first period.
     const sub = await createSubscription(
       seed,
-      { tenantId: 'acme', subjectId: 'u1', key: 'sub-k1', plan, seats: 3 },
+      { tenantId: 'acme', subjectId: 'u1', key: 'sub-k1', plan, seats: 3, startAt: minutesAgo(300) },
       NOW,
     );
     subscriptionId = sub.id;
@@ -451,5 +455,68 @@ describe('DB-backed read tools', { skip: harness === null ? SKIP_REASON : false 
       assert.equal(r.isError, true, `${name} must refuse an out-of-scope tenant`);
       assert.match(textOf(r), /outside this server's scope/);
     }
+  });
+
+  it('explain-charge walks the subscription, plan, usage and ledger with billing-kit numbers', async () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const catalogue = await loadPlanCatalogue(resolve(here, 'fixtures', 'plans.json'));
+    const withPlans = await connect({ db: h.db, catalogue });
+    const got = await withPlans.getPrompt({
+      name: 'explain-charge',
+      arguments: { tenantId: 'acme', subscription: 'sub-k1' },
+    });
+    const text = (got.messages[0]?.content as { text: string } | undefined)?.text ?? '';
+    assert.match(text, /billing-kit's walk/);
+    assert.match(
+      text,
+      new RegExp(`subscription: ${subscriptionId} \\(key sub-k1\\) subject u1 plan "team" state active seats 3`),
+    );
+    assert.match(text, /plan: team USD per month: base 49.00, seat 10.00 \(min 1\), trial 14 days/);
+    // 60 x 1000 tokens in the period, 10k included in the catalogue plan -> 50k overage x 0.00012 = 6 minor
+    assert.match(text, /usage tokens.input: 60000 over 60 events, included 10000/);
+    assert.match(text, /usage gb_hours: 7.5 over 3 events/);
+    assert.match(text, /flat\s+49\.00 USD/);
+    assert.match(text, /seats\s+30\.00 USD/);
+    assert.match(text, /usage\s+0\.06 USD.*tokens/);
+    assert.match(text, /total: \d+\.\d\d USD/);
+    // the ledger half: the seeded accrual is a charge posting; owed is 19.99
+    assert.match(text, /1 charge posting\(s\) to customer_balance since period start: 19.99 USD \(ch-1, Aug\)/);
+    assert.match(text, /owed now \(customer_balance USD\): 19.99/);
+
+    // by id too
+    const byId = await withPlans.getPrompt({
+      name: 'explain-charge',
+      arguments: { tenantId: 'acme', subscription: subscriptionId },
+    });
+    assert.match((byId.messages[0]?.content as { text: string } | undefined)?.text ?? '', /key sub-k1/);
+
+    // no catalogue: the walk says the plan is unavailable and points at the tools
+    const noPlans = await client.getPrompt({
+      name: 'explain-charge',
+      arguments: { tenantId: 'acme', subscription: 'sub-k1' },
+    });
+    const t2 = (noPlans.messages[0]?.content as { text: string } | undefined)?.text ?? '';
+    assert.match(t2, /plan: unavailable — no plan catalogue is configured/);
+    assert.match(t2, /owed now/);
+
+    // plan not in the catalogue
+    const solo = await loadPlanCatalogue(resolve(here, 'fixtures', 'plans.mjs'));
+    const wrongCat = await connect({ db: h.db, catalogue: solo });
+    const t3 =
+      (
+        (await wrongCat.getPrompt({ name: 'explain-charge', arguments: { tenantId: 'acme', subscription: 'sub-k1' } }))
+          .messages[0]?.content as { text: string } | undefined
+      )?.text ?? '';
+    assert.match(t3, /plan: "team" is NOT in the catalogue .*\(have solo\)/);
+
+    // not found, and out of scope
+    const missing = await withPlans.getPrompt({
+      name: 'explain-charge',
+      arguments: { tenantId: 'acme', subscription: 'no-such' },
+    });
+    assert.match((missing.messages[0]?.content as { text: string } | undefined)?.text ?? '', /NOT FOUND/);
+    const scoped = await connect({ db: h.db, tenantScope: 'acme' });
+    const out = await scoped.getPrompt({ name: 'explain-charge', arguments: { tenantId: 'other', subscription: 'x' } });
+    assert.match((out.messages[0]?.content as { text: string } | undefined)?.text ?? '', /scoped to tenant "acme"/);
   });
 });

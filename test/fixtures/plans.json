@@ -1,0 +1,33 @@
+{
+  "plans": [
+    {
+      "id": "free",
+      "name": "Free",
+      "currency": "USD",
+      "interval": "month",
+      "flat": "0",
+      "usage": [{ "metric": "tokens.input", "included": "100000", "price": { "kind": "flat", "rate": "0.00012" } }]
+    },
+    {
+      "id": "team",
+      "name": "Team",
+      "description": "Base fee plus seats; 10k tokens included, then 0.00012 minor units per token.",
+      "currency": "USD",
+      "interval": "month",
+      "flat": "49.00",
+      "seats": { "unit": "10.00", "min": 1 },
+      "usage": [
+        { "metric": "tokens.input", "included": "10000", "price": { "kind": "flat", "rate": "0.00012" } },
+        {
+          "metric": "gb_hours",
+          "price": {
+            "kind": "tiered",
+            "mode": "graduated",
+            "tiers": [{ "upTo": "100", "rate": "5" }, { "upTo": null, "rate": "3", "flat": "1.00" }]
+          }
+        }
+      ],
+      "trialDays": 14
+    }
+  ]
+}
