@@ -40,7 +40,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
     "@quxkit/billing-kit": "link:../billing-kit",
-    "@types/node": "^22.9.0",
+    "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
     "c8": "^12.0.0",
     "esbuild": "^0.28.2",
