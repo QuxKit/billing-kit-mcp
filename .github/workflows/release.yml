@@ -30,7 +30,7 @@ jobs:
           repository: QuxKit/billing-kit-components
           path: billing-kit-components
           token: ${{ secrets.QUXKIT_READ_TOKEN || github.token }}
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version: 22
