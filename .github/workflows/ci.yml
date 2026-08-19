@@ -54,19 +54,19 @@ jobs:
       BILLING_KIT_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/billing_kit_test
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: billing-kit-mcp
 
       - name: Checkout billing-kit (linked as ../billing-kit)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: QuxKit/billing-kit
           path: billing-kit
           token: ${{ secrets.QUXKIT_READ_TOKEN || github.token }}
 
       - name: Checkout billing-kit-components (registry.json for discovery)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: QuxKit/billing-kit-components
           path: billing-kit-components
