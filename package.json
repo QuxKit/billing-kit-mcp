@@ -38,7 +38,7 @@
     "@quxkit/billing-kit": "^0.1.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.8",
+    "@biomejs/biome": "^2.5.11",
     "@quxkit/billing-kit": "link:../billing-kit",
     "@types/node": "^26.2.0",
     "@types/pg": "^8.21.0",
