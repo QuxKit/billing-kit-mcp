@@ -57,5 +57,13 @@
   "homepage": "https://github.com/QuxKit/billing-kit-mcp#readme",
   "bugs": {
     "url": "https://github.com/QuxKit/billing-kit-mcp/issues"
-  }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
 }

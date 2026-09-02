@@ -19,6 +19,21 @@ import { startHttp } from './http.js';
 import { registerPrompts } from './prompts.js';
 import { registerResources } from './resources.js';
 import { registerDbTools } from './tools/db.js';
+// Re-exported so this package can be COMPOSED as well as spawned.
+//
+// The family server (@quxkit/quxkit-mcp) mounts these onto its own server, and
+// QuxCloud's Builder mounts them into a crew that has no transport at all.
+// Both were reaching for `registerLedgerTools` on this module and finding
+// nothing, because the functions lived one file down and the entry only
+// called them — a package that is a bin and nothing else.
+//
+// Importing this module starts no server: `main()` is guarded on isMain.
+export { registerDbTools } from './tools/db.js';
+export { registerDiscoveryTools } from './tools/discover.js';
+export { registerLedgerTools } from './tools/ledger.js';
+export { registerPriceTools } from './tools/price.js';
+export { registerWriteTools } from './tools/write.js';
+
 import { registerDiscoveryTools } from './tools/discover.js';
 import { registerLedgerTools } from './tools/ledger.js';
 import { registerPriceTools } from './tools/price.js';
