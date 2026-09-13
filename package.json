@@ -1,6 +1,6 @@
 {
   "name": "@quxkit/billing-kit-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An MCP server for billing-kit: exact money math, ledger checks, and component discovery for AI assistants.",
   "license": "Apache-2.0",
   "type": "module",
