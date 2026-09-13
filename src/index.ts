@@ -19,6 +19,7 @@ import { startHttp } from './http.js';
 import { registerPrompts } from './prompts.js';
 import { registerResources } from './resources.js';
 import { registerDbTools } from './tools/db.js';
+
 // Re-exported so this package can be COMPOSED as well as spawned.
 //
 // The family server (@quxkit/quxkit-mcp) mounts these onto its own server, and
