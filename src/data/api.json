@@ -2,7 +2,7 @@
   "note": "Curated reference to billing-kit's public API. Signatures are hand-authored and kept short; the point is discovery, not full type dumps.",
   "generatedFrom": {
     "package": "@quxkit/billing-kit",
-    "version": "0.1.0",
+    "version": "0.4.1",
     "source": "dist/**/index.d.ts via scripts/gen-discovery.mjs; `exports` is generated, `symbols` is curated by hand"
   },
   "exports": {
@@ -23,7 +23,11 @@
         "createBilling",
         "creditNotePosting",
         "currencyExponent",
+        "displayDefaults",
         "entries",
+        "formatMoney",
+        "formatQuantity",
+        "formatRate",
         "isKnownCurrency",
         "knownCurrencies",
         "paymentPosting",
@@ -35,7 +39,9 @@
         "record",
         "recordMany",
         "refundPosting",
+        "resetDisplayDefaults",
         "scaleFraction",
+        "setDisplayDefaults",
         "settlementPosting",
         "validateEvent",
         "walletBalance",
@@ -55,6 +61,7 @@
         "CancelAt",
         "Clock",
         "CustomerRef",
+        "DisplayOptions",
         "EntriesQuery",
         "LedgerEntry",
         "LedgerLeg",
@@ -105,6 +112,7 @@
         "createStripeProvider",
         "isProviderError",
         "ourAmountIsAuthoritative",
+        "providerDuns",
         "providerIdFromOurRecords",
         "settlementModeFor",
         "settlementPostsCash",
@@ -192,6 +200,7 @@
         "createSubscription",
         "createSubscriptions",
         "daysInPeriod",
+        "defineBundle",
         "definePlan",
         "discountForPeriod",
         "dueSubscriptions",
@@ -200,6 +209,8 @@
       ],
       "types": [
         "BillingInterval",
+        "BundleDefinition",
+        "BundleItem",
         "CancelWhen",
         "ChangeBehaviour",
         "ChangePlanInput",
@@ -234,6 +245,7 @@
     "@quxkit/billing-kit/entitlements": {
       "values": [
         "activeSubscription",
+        "activeSubscriptions",
         "check",
         "createEntitlements",
         "entitlements",
@@ -288,6 +300,58 @@
         "NewInvoiceLine",
         "RenderOptions",
         "StoredChargeLine"
+      ]
+    },
+    "@quxkit/billing-kit/tax": {
+      "values": [
+        "assertQuoteCovers",
+        "taxLinesFrom",
+        "taxTotal",
+        "taxableLinesOf"
+      ],
+      "types": [
+        "TaxAddress",
+        "TaxAmount",
+        "TaxCalculator",
+        "TaxCommitInput",
+        "TaxParty",
+        "TaxPricing",
+        "TaxQuote",
+        "TaxQuoteRequest",
+        "TaxRegistration",
+        "TaxableLine"
+      ]
+    },
+    "@quxkit/billing-kit/dunning": {
+      "values": [
+        "advanceDunning",
+        "closeCase",
+        "decide",
+        "dueCases",
+        "firstActionAt",
+        "forProvider",
+        "getCase",
+        "listCases",
+        "openCase"
+      ],
+      "types": [
+        "CaseRef",
+        "DueCaseQuery",
+        "DunningAction",
+        "DunningActionKind",
+        "DunningCase",
+        "DunningDecision",
+        "DunningPolicy",
+        "DunningState",
+        "DunningStep",
+        "DunningSweepError",
+        "DunningSweepItem",
+        "DunningSweepOptions",
+        "DunningSweepReport",
+        "DunningSweepRetry",
+        "ListCasesQuery",
+        "OpenCaseInput",
+        "OpenedCase"
       ]
     },
     "@quxkit/billing-kit/pg": {
