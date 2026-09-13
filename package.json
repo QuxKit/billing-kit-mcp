@@ -10,7 +10,8 @@
   "files": [
     "dist",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "NOTICE"
   ],
   "engines": {
     "node": ">=20.19.0"
@@ -35,7 +36,7 @@
     "zod": "^3.23.0"
   },
   "peerDependencies": {
-    "@quxkit/billing-kit": "^0.1.0"
+    "@quxkit/billing-kit": ">=0.4.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
