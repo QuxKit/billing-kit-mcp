@@ -135,7 +135,7 @@ export function registerWriteTools(server: McpServer, options: WriteToolOptions)
             'When it happened (ISO-8601 with offset). Required, not defaulted: it is part of the event and of ' +
               'the idempotency check — a retry must send the same instant. Must not be in the future.',
           ),
-        metadata: z.record(z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
         idempotencyKey,
         confirm,
       },

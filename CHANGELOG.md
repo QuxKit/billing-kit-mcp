@@ -6,6 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-24
+
+### Security
+
+- **Dependencies are no longer bundled into `dist/index.js`.** The build
+  inlined the MCP SDK, zod, hono and fast-uri, so a host could not patch them:
+  0.1.1 shipped MCP SDK 1.30.0 (GHSA-6qxp-vccf-f47h, GHSA-22jm-h49p-29qw,
+  GHSA-46jr-4wx8-v453, GHSA-6prh-2h8m-c8cw, GHSA-rvq5-wwqv-78pq), zod 3.25.76
+  (GHSA-mrhx-c7xc-m3w5), hono 4.13.2 and fast-uri 3.1.5 inside the file, where
+  `pnpm audit` and a host's overrides cannot reach. Every package import is now
+  external (`--packages=external`) and resolved from `node_modules`.
+- `@modelcontextprotocol/sdk` is `^1.32.0` and `zod` is `^4.6.6`, the first
+  releases with those advisories fixed. zod has no fixed 3.x release.
+
+### Changed
+
+- zod 4. The one schema the 3.x API allowed and 4 does not, `record_usage`'s
+  `metadata` record, now names its key type (`z.record(z.string(), z.unknown())`);
+  what it accepts is unchanged.
+
+## [0.1.1] - 2026-09-13
+
 ### Fixed
 
 - Discovery snapshots regenerated: billing-kit now exports `./invoices` and
