@@ -2,7 +2,7 @@
   "note": "Curated reference to billing-kit's public API. Signatures are hand-authored and kept short; the point is discovery, not full type dumps.",
   "generatedFrom": {
     "package": "@quxkit/billing-kit",
-    "version": "0.4.1",
+    "version": "0.5.0",
     "source": "dist/**/index.d.ts via scripts/gen-discovery.mjs; `exports` is generated, `symbols` is curated by hand"
   },
   "exports": {
@@ -11,10 +11,13 @@
         "BillingError",
         "DECIMAL_SCALE",
         "ENTRIES_MAX_ROWS",
+        "KIT",
+        "LicenceError",
         "Money",
         "Quantity",
         "RECORD_MANY_MAX",
         "Rate",
+        "VERSION",
         "accrualPosting",
         "aggregateUsage",
         "allocate",
@@ -67,6 +70,9 @@
         "LedgerLeg",
         "LedgerPosting",
         "LedgerSourceKind",
+        "LicenceClient",
+        "LicenceOptions",
+        "LicenceStatus",
         "Logger",
         "MoneyJSON",
         "PackagePrice",
